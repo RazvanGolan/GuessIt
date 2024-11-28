@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "./firebaseConfig";
-import { updateDoc, setDoc, getDoc ,doc } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence} from "firebase/auth";
 
 const auth = getAuth();
 
@@ -35,6 +35,9 @@ function MainPage() {
     // Function to handle login/signup
     const handleAuth = async (isSignup) => {
         try {
+            // Set persistence for authentication
+            await setPersistence(auth, browserLocalPersistence);
+
             let userCredential;
             if (isSignup) {
                 userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -60,7 +63,6 @@ function MainPage() {
 
     // Function to log in as a guest
     const handleGuest = () => {
-        // Show the guest name input form
         setIsNameInputVisible(true);
     };
 
@@ -71,21 +73,50 @@ function MainPage() {
             return;
         }
 
-        const guestId = `guest-${guestName.toLowerCase()}`; // Generate a unique guest ID
+        const guestId = `guest-${guestName.toLowerCase()}`;
         const guestData = { id: guestId, name: guestName, isGuest: true };
 
-        // Save guest data to Firestore in the users collection with a guest ID
         try {
-            const userRef = doc(db, "users", guestId); // Save under users/{guestId}
-            await setDoc(userRef, guestData); // Create the document with the guest data
-            setUser(guestData); // Update the user state
-            setIsGuest(true); // Set guest state
-            setIsNameInputVisible(false); // Hide name input after submission
+            const userRef = doc(db, "users", guestId);
+            await setDoc(userRef, guestData);
+            setUser(guestData);
+            setIsGuest(true);
+            setIsNameInputVisible(false);
+
+            // Save guest data to localStorage for persistence
+            localStorage.setItem("guestUser", JSON.stringify(guestData));
         } catch (error) {
             console.error("Error saving guest data:", error);
         }
     };
 
+    // Check for authenticated user or guest on page load
+    useEffect(() => {
+        // Firebase Auth: Check for authenticated user
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                const userData = {
+                    id: firebaseUser.uid,
+                    name: firebaseUser.displayName || "User",
+                    email: firebaseUser.email,
+                    isGuest: false,
+                };
+                setUser(userData);
+                console.log("Authenticated user restored:", userData);
+            }
+        });
+
+        // Check for guest user in localStorage
+        const storedGuest = localStorage.getItem("guestUser");
+        if (storedGuest) {
+            const guestData = JSON.parse(storedGuest);
+            setUser(guestData);
+            setIsGuest(true);
+            console.log("Guest user restored:", guestData);
+        }
+
+        return () => unsubscribe(); // Cleanup on unmount
+    }, []);
 
     // Function to create a room
     const hostGame = async () => {
@@ -96,11 +127,9 @@ function MainPage() {
 
         try {
             const shortId = Math.floor(10000 + Math.random() * 90000).toString();
-
-            // Use setDoc to set the document ID explicitly to the shortId
-            const roomRef = doc(db, "rooms", shortId); // Create a reference to the room with the custom ID
+            const roomRef = doc(db, "rooms", shortId);
             await setDoc(roomRef, {
-                roomId: shortId, // Store the roomId as a field
+                roomId: shortId,
                 participants: [
                     {
                         id: user.id,
@@ -111,7 +140,7 @@ function MainPage() {
             });
 
             console.log("Room created with ID:", shortId);
-            navigate(`/room/${shortId}`); // Redirect to the new room URL with the custom ID
+            navigate(`/room/${shortId}`);
         } catch (error) {
             console.error("Error creating room:", error);
         }
