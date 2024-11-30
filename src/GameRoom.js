@@ -1,6 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import {
+    doc,
+    getDoc,
+    updateDoc,
+    deleteDoc,
+    onSnapshot
+} from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
 
@@ -9,57 +15,41 @@ function GameRoom() {
     const navigate = useNavigate();
     const [participants, setParticipants] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
+    const [isRoomActive, setIsRoomActive] = useState(true);
     const auth = getAuth();
 
-    // Create a reusable function to leave the room
-    const leaveRoom = useCallback(async () => {
-        if (!currentUser) return;
-
-        try {
-            const roomRef = doc(db, "rooms", roomId);
-            const roomSnap = await getDoc(roomRef);
-
-            if (roomSnap.exists()) {
-                const roomData = roomSnap.data();
-
-                // Filter out the current user from participants
-                const updatedParticipants = roomData.participants.filter(
-                    participant => participant.id !== currentUser.id
-                );
-
-                // If no participants left, delete the room
-                if (updatedParticipants.length === 0) {
-                    await deleteDoc(roomRef);
-                    console.log("Room deleted as no participants remain");
-                } else {
-                    // Update the room document with the filtered participants
-                    await updateDoc(roomRef, {
-                        participants: updatedParticipants
-                    });
-                }
-            }
-        } catch (error) {
-            console.error("Error leaving room:", error);
-        }
-    }, [currentUser, roomId]);
-
-    // Handle page unload
+    // Real-time room listener
     useEffect(() => {
-        const handleBeforeUnload = async (event) => {
-            event.preventDefault(); // Standard way to show browser prompt
-            await leaveRoom(); // Remove user from room
-        };
+        if (!roomId) return;
 
-        // Add event listener
-        window.addEventListener('beforeunload', handleBeforeUnload);
+        // Set up a real-time listener on the room document
+        const roomRef = doc(db, "rooms", roomId);
+        const unsubscribe = onSnapshot(roomRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const roomData = docSnapshot.data();
 
-        // Cleanup function
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [leaveRoom]);
+                // Update participants in real-time
+                setParticipants(roomData.participants || []);
 
-    // Existing useEffect for authentication and room data
+                // Check if room still exists
+                if (!roomData.participants || roomData.participants.length === 0) {
+                    setIsRoomActive(false);
+                    navigate("/");
+                }
+            } else {
+                // Room has been deleted
+                setIsRoomActive(false);
+                navigate("/");
+            }
+        }, (error) => {
+            console.error("Error listening to room updates:", error);
+            navigate("/");
+        });
+
+        return () => unsubscribe(); // Cleanup listener
+    }, [roomId, navigate]);
+
+    // Authentication and user setup
     useEffect(() => {
         const storedGuest = localStorage.getItem("guestUser");
 
@@ -77,39 +67,64 @@ function GameRoom() {
             }
         });
 
-        if (roomId) {
-            fetchRoomData();
-        }
-
         return () => unsubscribe();
-    }, [roomId, auth]);
+    }, [auth]);
 
-    const fetchRoomData = async () => {
-        console.log("Fetching room data for room ID:", roomId);
+    // Leave room function
+    const leaveRoom = useCallback(async () => {
+        if (!currentUser || !roomId) return;
 
-        const roomRef = doc(db, "rooms", roomId);
-        const roomSnap = await getDoc(roomRef);
+        try {
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
 
-        if (roomSnap.exists()) {
-            const roomData = roomSnap.data();
-            console.log("Room data found:", roomData);
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
 
-            const roomIdFromData = roomData.roomId;
+                // Filter out the current user from participants
+                const updatedParticipants = roomData.participants.filter(
+                    participant => participant.id !== currentUser.id
+                );
 
-            if (roomIdFromData.toString() === roomId) {
-                setParticipants(roomData.participants);
-            } else {
-                console.error("Room ID mismatch. Expected:", roomId, "but found:", roomIdFromData);
+                // If no participants left, delete the room
+                if (updatedParticipants.length === 0) {
+                    await deleteDoc(roomRef);
+                } else {
+                    // Update the room document with the filtered participants
+                    await updateDoc(roomRef, {
+                        participants: updatedParticipants
+                    });
+                }
             }
-        } else {
-            console.error("Room not found:", roomId);
+        } catch (error) {
+            console.error("Error leaving room:", error);
         }
-    };
+    }, [currentUser, roomId]);
 
+    // Handle page unload
+    useEffect(() => {
+        const handleBeforeUnload = async (event) => {
+            event.preventDefault();
+            await leaveRoom();
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [leaveRoom]);
+
+    // Manual leave handler
     const handleManualLeave = async () => {
         await leaveRoom();
         navigate("/");
     };
+
+    // Render the room UI
+    if (!isRoomActive) {
+        return <div>Room is no longer active. Redirecting...</div>;
+    }
 
     return (
         <div>
