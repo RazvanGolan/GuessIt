@@ -22,6 +22,12 @@ function QRCodeComponent() {
                         value={currentUrl}
                         size={256}
                         level={'H'}
+                        imageSettings={{
+                            src: "https://akm-img-a-in.tosshub.com/indiatoday/images/story/202411/chill-guy-memes-have-flooded-social-media-241142207-16x9_0.jpg?VersionId=.osD_GpxkoPy9zvr5i97YYdKPrDZAtG_&size=690:388",
+                            excavate: true,
+                            height: 100,
+                            width: 100
+                        }}
                     />
                     <p>Scan this QR code to join the room</p>
                 </div>
