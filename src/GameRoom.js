@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
+import ChatBox from "./ChatBox";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -185,6 +186,13 @@ function GameRoom() {
                 ))}
             </ul>
             <button onClick={handleManualLeave}>Leave Room</button>
+
+            {currentUser && (
+                <ChatBox
+                    roomId={roomId}
+                    currentUser={currentUser}
+                />
+            )}
         </div>
     );
 }
