@@ -18,6 +18,7 @@ function GameRoom() {
     const [currentUser, setCurrentUser] = useState(null);
     const [isRoomActive, setIsRoomActive] = useState(true);
     const [isUserJoined, setIsUserJoined] = useState(false);
+    const [copyStatus, setCopyStatus] = useState('Invite Link');
     const auth = getAuth();
 
     // Function to join the room
@@ -169,6 +170,29 @@ function GameRoom() {
         navigate("/");
     };
 
+    // Invite Link Handler
+    const handleInviteLink = useCallback(() => {
+        // Get the current full URL
+        const inviteLink = window.location.href;
+
+        // Use the Clipboard API to copy the link
+        navigator.clipboard.writeText(inviteLink)
+            .then(() => {
+                // Update button text to show successful copy
+                setCopyStatus('Copied!');
+
+                // Reset button text after 2 seconds
+                setTimeout(() => {
+                    setCopyStatus('Invite Link');
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy invite link');
+            });
+    }, []);
+
+
     // Render the room UI
     if (!isRoomActive) {
         return <div>Room is no longer active. Redirecting...</div>;
@@ -185,8 +209,10 @@ function GameRoom() {
                     </li>
                 ))}
             </ul>
-            <button onClick={handleManualLeave}>Leave Room</button>
-
+            <div>
+                <button onClick={handleManualLeave}>Leave Room</button>
+                <button onClick={handleInviteLink}>{copyStatus}</button>
+            </div>
             {currentUser && (
                 <ChatBox
                     roomId={roomId}
