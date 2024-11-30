@@ -1,44 +1,114 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
 
 function GameRoom() {
-    const { roomId } = useParams();  // Get the roomId from URL params (this is the document ID in Firestore)
+    const { roomId } = useParams();
+    const navigate = useNavigate();
     const [participants, setParticipants] = useState([]);
+    const [currentUser, setCurrentUser] = useState(null);
+    const auth = getAuth();
 
+    // Create a reusable function to leave the room
+    const leaveRoom = useCallback(async () => {
+        if (!currentUser) return;
+
+        try {
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
+
+                // Filter out the current user from participants
+                const updatedParticipants = roomData.participants.filter(
+                    participant => participant.id !== currentUser.id
+                );
+
+                // If no participants left, delete the room
+                if (updatedParticipants.length === 0) {
+                    await deleteDoc(roomRef);
+                    console.log("Room deleted as no participants remain");
+                } else {
+                    // Update the room document with the filtered participants
+                    await updateDoc(roomRef, {
+                        participants: updatedParticipants
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Error leaving room:", error);
+        }
+    }, [currentUser, roomId]);
+
+    // Handle page unload
     useEffect(() => {
-        // Run fetchRoomData only if roomId exists
+        const handleBeforeUnload = async (event) => {
+            event.preventDefault(); // Standard way to show browser prompt
+            await leaveRoom(); // Remove user from room
+        };
+
+        // Add event listener
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        // Cleanup function
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [leaveRoom]);
+
+    // Existing useEffect for authentication and room data
+    useEffect(() => {
+        const storedGuest = localStorage.getItem("guestUser");
+
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                const userData = {
+                    id: firebaseUser.uid,
+                    name: firebaseUser.displayName || firebaseUser.email,
+                    email: firebaseUser.email,
+                    isGuest: false
+                };
+                setCurrentUser(userData);
+            } else if (storedGuest) {
+                setCurrentUser(JSON.parse(storedGuest));
+            }
+        });
+
         if (roomId) {
             fetchRoomData();
         }
-    }, [roomId]);
+
+        return () => unsubscribe();
+    }, [roomId, auth]);
 
     const fetchRoomData = async () => {
-        console.log("Fetching room data for room ID (Firestore Document ID):", roomId);  // Log the room ID from URL
+        console.log("Fetching room data for room ID:", roomId);
 
-        // Query Firestore using the roomId as the document ID (Firestore document ID)
         const roomRef = doc(db, "rooms", roomId);
-        console.log("Room reference path:", roomRef.path);  // Log the path to verify the document reference
-
-        const roomSnap = await getDoc(roomRef);  // Fetch the document snapshot
+        const roomSnap = await getDoc(roomRef);
 
         if (roomSnap.exists()) {
-            const roomData = roomSnap.data();  // Get the data from the document
-            console.log("Room data found:", roomData);  // Log the data retrieved from Firestore
+            const roomData = roomSnap.data();
+            console.log("Room data found:", roomData);
 
-            // Now we access the roomId property inside the document
-            const roomIdFromData = roomData.roomId; // Access the roomId property inside the document
+            const roomIdFromData = roomData.roomId;
 
-            // Check if the roomId matches (in case you want to do some additional checks)
             if (roomIdFromData.toString() === roomId) {
-                setParticipants(roomData.participants);  // Set participants if roomId matches
+                setParticipants(roomData.participants);
             } else {
                 console.error("Room ID mismatch. Expected:", roomId, "but found:", roomIdFromData);
             }
         } else {
-            console.error("Room not found:", roomId);  // Log error if room document is not found
+            console.error("Room not found:", roomId);
         }
+    };
+
+    const handleManualLeave = async () => {
+        await leaveRoom();
+        navigate("/");
     };
 
     return (
@@ -52,6 +122,7 @@ function GameRoom() {
                     </li>
                 ))}
             </ul>
+            <button onClick={handleManualLeave}>Leave Room</button>
         </div>
     );
 }
