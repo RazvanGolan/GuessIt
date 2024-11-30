@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "./firebaseConfig";
 import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence} from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, updateProfile, browserLocalPersistence} from "firebase/auth";
 
 const auth = getAuth();
 
@@ -41,15 +41,21 @@ function MainPage() {
             let userCredential;
             if (isSignup) {
                 userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+                // Set the display name for the newly created user
+                await updateProfile(userCredential.user, {
+                    displayName: name,
+                });
             } else {
                 userCredential = await signInWithEmailAndPassword(auth, email, password);
             }
+
             const firebaseUser = userCredential.user;
 
             const userData = {
                 id: firebaseUser.uid,
-                name,
-                email,
+                name: firebaseUser.displayName || name, // Use display name if available
+                email: firebaseUser.email,
                 isGuest: false,
             };
 
@@ -60,6 +66,7 @@ function MainPage() {
             console.error("Error with authentication:", error);
         }
     };
+
 
     // Function to log in as a guest
     const handleGuest = () => {

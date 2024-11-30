@@ -16,7 +16,51 @@ function GameRoom() {
     const [participants, setParticipants] = useState([]);
     const [currentUser, setCurrentUser] = useState(null);
     const [isRoomActive, setIsRoomActive] = useState(true);
+    const [isUserJoined, setIsUserJoined] = useState(false);
     const auth = getAuth();
+
+    // Function to join the room
+    const joinRoom = useCallback(async (user) => {
+        if (!user || isUserJoined) return;
+
+        try {
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
+
+                // Check if user is already in the room
+                const isAlreadyInRoom = roomData.participants.some(
+                    participant => participant.id === user.id
+                );
+
+                if (!isAlreadyInRoom) {
+                    // Add user to the room
+                    await updateDoc(roomRef, {
+                        participants: [
+                            ...roomData.participants,
+                            {
+                                id: user.id,
+                                name: user.name,
+                                isGuest: user.isGuest || false
+                            }
+                        ]
+                    });
+
+                    setIsUserJoined(true);
+                }
+            } else {
+                // Room doesn't exist
+                alert("Room not found");
+                navigate("/");
+            }
+        } catch (error) {
+            console.error("Error joining room:", error);
+            alert("Failed to join room");
+            navigate("/");
+        }
+    }, [roomId, navigate, isUserJoined]);
 
     // Real-time room listener
     useEffect(() => {
@@ -62,8 +106,11 @@ function GameRoom() {
                     isGuest: false
                 };
                 setCurrentUser(userData);
+                joinRoom(userData);
             } else if (storedGuest) {
-                setCurrentUser(JSON.parse(storedGuest));
+                const guestUser = JSON.parse(storedGuest);
+                setCurrentUser(guestUser);
+                joinRoom(guestUser);
             }
         });
 
