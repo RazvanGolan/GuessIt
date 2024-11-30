@@ -5,7 +5,7 @@ import {
     getDoc,
     updateDoc,
     deleteDoc,
-    onSnapshot
+    onSnapshot, collection, addDoc
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
@@ -49,6 +49,14 @@ function GameRoom() {
                                 isGuest: user.isGuest || false
                             }
                         ]
+                    });
+
+                    // Add a system message to the chat
+                    const messagesRef = collection(db, "rooms", roomId, "messages");
+                    await addDoc(messagesRef, {
+                        text: `${user.name} has joined the room.`,
+                        sender: { id: "system", name: "System" },
+                        timestamp: new Date()
                     });
 
                     setIsUserJoined(true);
@@ -136,6 +144,17 @@ function GameRoom() {
                     participant => participant.id !== currentUser.id
                 );
 
+                // Announce in the chat that the user left
+                const messagesRef = collection(db, "rooms", roomId, "messages");
+                await addDoc(messagesRef, {
+                    text: `${currentUser.name} has left the room.`,
+                    sender: {
+                        id: "system", // Use "system" to denote system messages
+                        name: "System"
+                    },
+                    timestamp: new Date()
+                });
+
                 // If no participants left, delete the room
                 if (updatedParticipants.length === 0) {
                     await deleteDoc(roomRef);
@@ -150,6 +169,7 @@ function GameRoom() {
             console.error("Error leaving room:", error);
         }
     }, [currentUser, roomId]);
+
 
     // Handle page unload
     useEffect(() => {

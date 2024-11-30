@@ -39,7 +39,7 @@ function ChatBox({ roomId, currentUser }) {
 
     // Scroll to bottom when messages update
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
     }, [messages]);
 
     // Send message handler
@@ -63,7 +63,6 @@ function ChatBox({ roomId, currentUser }) {
             console.error("Error sending message:", error);
         }
     }, [newMessage, currentUser, roomId]);
-
     return (
         <div className="chat-container">
             <div className="messages-list">
@@ -72,10 +71,15 @@ function ChatBox({ roomId, currentUser }) {
                         key={message.id}
                         className="message"
                     >
-                        <strong>{message.sender.name}:</strong> {message.text}
+                        {/* Check if the message is from the system */}
+                        {message.sender.id !== "system" && (
+                            <strong>{message.sender.name}:</strong>
+                        )}{" "}
+                        {message.text}
                     </div>
                 ))}
-                <div ref={messagesEndRef} /> {/* Scroll anchor */}
+                <div ref={messagesEndRef}/>
+                {/* Scroll anchor */}
             </div>
             <form onSubmit={sendMessage} className="message-input-form">
                 <input
