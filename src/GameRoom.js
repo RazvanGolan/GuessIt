@@ -10,6 +10,7 @@ import {
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
 import ChatBox from "./ChatBox";
+import QRCodeComponent from "./QRCodeComponent";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -212,6 +213,7 @@ function GameRoom() {
             <div>
                 <button onClick={handleManualLeave}>Leave Room</button>
                 <button onClick={handleInviteLink}>{copyStatus}</button>
+                <QRCodeComponent/>
             </div>
             {currentUser && (
                 <ChatBox
