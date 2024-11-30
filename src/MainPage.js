@@ -78,13 +78,27 @@ function MainPage() {
 
         try {
             const userRef = doc(db, "users", guestId);
-            await setDoc(userRef, guestData);
-            setUser(guestData);
-            setIsGuest(true);
-            setIsNameInputVisible(false);
+            const userSnap = await getDoc(userRef);
 
-            // Save guest data to localStorage for persistence
-            localStorage.setItem("guestUser", JSON.stringify(guestData));
+            if (userSnap.exists()) {
+                // If user already exists, just use the existing user data
+                const existingUserData = userSnap.data();
+                setUser(existingUserData);
+                setIsGuest(true);
+                setIsNameInputVisible(false);
+
+                // Update localStorage with existing user
+                localStorage.setItem("guestUser", JSON.stringify(existingUserData));
+            } else {
+                // If user doesn't exist, create new guest user
+                await setDoc(userRef, guestData);
+                setUser(guestData);
+                setIsGuest(true);
+                setIsNameInputVisible(false);
+
+                // Save guest data to localStorage for persistence
+                localStorage.setItem("guestUser", JSON.stringify(guestData));
+            }
         } catch (error) {
             console.error("Error saving guest data:", error);
         }
