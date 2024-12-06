@@ -191,10 +191,9 @@ function GameRoom() {
         navigate("/");
     };
 
-    // Invite Link Handler
     const handleInviteLink = useCallback(() => {
-        // Get the current full URL
-        const inviteLink = window.location.href;
+        // Generate an invite link with roomId as a query parameter
+        const inviteLink = `${window.location.origin}/?roomId=${roomId}`;
 
         // Use the Clipboard API to copy the link
         navigator.clipboard.writeText(inviteLink)
@@ -211,7 +210,7 @@ function GameRoom() {
                 console.error('Failed to copy: ', err);
                 alert('Failed to copy invite link');
             });
-    }, []);
+    }, [roomId]);
 
 
     // Render the room UI
@@ -233,7 +232,7 @@ function GameRoom() {
             <div>
                 <button onClick={handleManualLeave}>Leave Room</button>
                 <button onClick={handleInviteLink}>{copyStatus}</button>
-                <QRCodeComponent/>
+                <QRCodeComponent roomId={roomId}/>
             </div>
             {currentUser && (
                 <ChatBox

@@ -2,11 +2,11 @@ import { QRCodeSVG } from "qrcode.react";
 import React, { useState } from "react";
 import './QRCodeComponent.css'; // Import the CSS file
 
-function QRCodeComponent() {
+function QRCodeComponent({ roomId}) {
     const [showQRCode, setShowQRCode] = useState(false);
 
     const QRCodeModal = () => {
-        const currentUrl = window.location.href;
+        const inviteLink = `${window.location.origin}/?roomId=${roomId}`;
 
         return (
             <div className="qr-code-modal-backdrop">
@@ -19,7 +19,7 @@ function QRCodeComponent() {
                     </button>
                     <h3>Scan to Join Room</h3>
                     <QRCodeSVG
-                        value={currentUrl}
+                        value={inviteLink}
                         size={256}
                         level={'H'}
                         imageSettings={{
