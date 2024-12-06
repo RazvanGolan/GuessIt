@@ -5,10 +5,14 @@ import {
     getDoc,
     updateDoc,
     deleteDoc,
-    onSnapshot
+    onSnapshot,
+    collection,
+    addDoc
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
+import ChatBox from "./ChatBox";
+import QRCodeComponent from "./QRCodeComponent";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -17,6 +21,8 @@ function GameRoom() {
     const [currentUser, setCurrentUser] = useState(null);
     const [isRoomActive, setIsRoomActive] = useState(true);
     const [isUserJoined, setIsUserJoined] = useState(false);
+    const [isRoomOwner, setIsRoomOwner] = useState(false);
+    const [copyStatus, setCopyStatus] = useState('Invite Link');
     const auth = getAuth();
 
     // Function to join the room
@@ -43,13 +49,21 @@ function GameRoom() {
                             {
                                 id: user.id,
                                 name: user.name,
-                                isGuest: user.isGuest || false
+                                isGuest: user.isGuest || false,
+                                isOwner: false
                             }
                         ]
                     });
-
-                    setIsUserJoined(true);
                 }
+                // Add a system message to the chat
+                const messagesRef = collection(db, "rooms", roomId, "messages");
+                await addDoc(messagesRef, {
+                    text: `${user.name} has joined the room.`,
+                    sender: {id: "system", name: "System"},
+                    timestamp: new Date()
+                });
+
+                setIsUserJoined(true);
             } else {
                 // Room doesn't exist
                 alert("Room not found");
@@ -75,6 +89,21 @@ function GameRoom() {
                 // Update participants in real-time
                 setParticipants(roomData.participants || []);
 
+                // Check if current user is the owner
+                if (currentUser) {
+                    const userParticipant = roomData.participants.find(
+                        p => p.id === currentUser.id
+                    );
+
+                    if (!userParticipant) {
+                        setIsRoomActive(false);
+                        navigate("/");
+                        return;
+                    }
+
+                    setIsRoomOwner(userParticipant?.isOwner || false);
+                }
+
                 // Check if room still exists
                 if (!roomData.participants || roomData.participants.length === 0) {
                     setIsRoomActive(false);
@@ -91,7 +120,7 @@ function GameRoom() {
         });
 
         return () => unsubscribe(); // Cleanup listener
-    }, [roomId, navigate]);
+    }, [roomId, navigate, currentUser]);
 
     // Authentication and user setup
     useEffect(() => {
@@ -115,7 +144,7 @@ function GameRoom() {
         });
 
         return () => unsubscribe();
-    }, [auth]);
+    }, [auth, joinRoom]);
 
     // Leave room function
     const leaveRoom = useCallback(async () => {
@@ -133,11 +162,33 @@ function GameRoom() {
                     participant => participant.id !== currentUser.id
                 );
 
-                // If no participants left, delete the room
-                if (updatedParticipants.length === 0) {
+                // Announce in the chat that the user left
+                const messagesRef = collection(db, "rooms", roomId, "messages");
+                await addDoc(messagesRef, {
+                    text: `${currentUser.name} has left the room.`,
+                    sender: {
+                        id: "system",
+                        name: "System"
+                    },
+                    timestamp: new Date()
+                });
+
+                // If the owner is leaving and there are other participants
+                if (isRoomOwner && updatedParticipants.length > 0) {
+                    // Transfer ownership to the first participant
+                    updatedParticipants[0].isOwner = true;
+                    await updateDoc(roomRef, {
+                        participants: updatedParticipants,
+                        ownerName: updatedParticipants[0].name
+                    });
+                }
+                // If the owner is leaving and no participants remain
+                else if (isRoomOwner) {
+                    // Delete the room
                     await deleteDoc(roomRef);
-                } else {
-                    // Update the room document with the filtered participants
+                }
+                // If not the owner, just update participants
+                else {
                     await updateDoc(roomRef, {
                         participants: updatedParticipants
                     });
@@ -146,7 +197,7 @@ function GameRoom() {
         } catch (error) {
             console.error("Error leaving room:", error);
         }
-    }, [currentUser, roomId]);
+    }, [currentUser, roomId, isRoomOwner]);
 
     // Handle page unload
     useEffect(() => {
@@ -168,6 +219,66 @@ function GameRoom() {
         navigate("/");
     };
 
+    // Invite Link Handler
+    const handleInviteLink = useCallback(() => {
+        // Generate an invite link with roomId as a query parameter
+        const inviteLink = `${window.location.origin}/?roomId=${roomId}`;
+
+        // Use the Clipboard API to copy the link
+        navigator.clipboard.writeText(inviteLink)
+            .then(() => {
+                // Update button text to show successful copy
+                setCopyStatus('Copied!');
+
+                // Reset button text after 2 seconds
+                setTimeout(() => {
+                    setCopyStatus('Invite Link');
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy invite link');
+            });
+    }, [roomId]);
+
+    const removeParticipant = async (participantId) => {
+        if (!isRoomOwner || !roomId) {
+            alert("Only the room owner can remove participants.");
+            return;
+        }
+
+        try {
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
+
+                const updatedParticipants = roomData.participants.filter(
+                    (participant) => participant.id !== participantId
+                );
+
+                await updateDoc(roomRef, {
+                    participants: updatedParticipants,
+                });
+
+                // Announce the removal in the chat
+                const removedParticipant = roomData.participants.find(
+                    (p) => p.id === participantId
+                );
+                const messagesRef = collection(db, "rooms", roomId, "messages");
+                await addDoc(messagesRef, {
+                    text: `${removedParticipant.name} has been removed from the room by ${roomData.ownerName}.`,
+                    sender: { id: "system", name: "System" },
+                    timestamp: new Date(),
+                });
+            }
+        } catch (error) {
+            console.error("Error removing participant:", error);
+            alert("Failed to remove participant.");
+        }
+    };
+
     // Render the room UI
     if (!isRoomActive) {
         return <div>Room is no longer active. Redirecting...</div>;
@@ -180,11 +291,34 @@ function GameRoom() {
             <ul>
                 {participants.map((p) => (
                     <li key={p.id}>
-                        {p.name} {p.isGuest ? "(Guest)" : ""}
+                        {p.name}
+                        {p.isGuest ? " (Guest)" : ""}
+                        {p.isOwner ? " 👑 (Owner)" : ""}
+                        {isRoomOwner && !p.isOwner && (
+                            <button
+                                onClick={() => removeParticipant(p.id)}
+                                style={{ marginLeft: "10px" }}
+                            >
+                                Remove
+                            </button>
+                        )}
                     </li>
                 ))}
             </ul>
-            <button onClick={handleManualLeave}>Leave Room</button>
+            <div>
+                <button onClick={handleManualLeave}>Leave Room</button>
+                <button onClick={handleInviteLink}>{copyStatus}</button>
+                {isRoomOwner && (
+                    <button onClick={() => alert("Start Game clicked!")}>Start Game</button>
+                )}
+                <QRCodeComponent />
+            </div>
+            {currentUser && (
+                <ChatBox
+                    roomId={roomId}
+                    currentUser={currentUser}
+                />
+            )}
         </div>
     );
 }

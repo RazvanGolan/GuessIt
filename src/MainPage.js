@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import {useLocation, useNavigate} from "react-router-dom";
 import { db } from "./firebaseConfig";
-import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
+import {setDoc, getDoc, doc, updateDoc, collection, addDoc} from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, updateProfile, browserLocalPersistence} from "firebase/auth";
 
 const auth = getAuth();
@@ -17,6 +17,7 @@ function MainPage() {
     const [isNameInputVisible, setIsNameInputVisible] = useState(false); // Show guest name input
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Save user or guest data to Firestore
     const saveUserData = async (userData) => {
@@ -88,23 +89,27 @@ function MainPage() {
             const userSnap = await getDoc(userRef);
 
             if (userSnap.exists()) {
-                // If user already exists, just use the existing user data
                 const existingUserData = userSnap.data();
                 setUser(existingUserData);
                 setIsGuest(true);
                 setIsNameInputVisible(false);
-
-                // Update localStorage with existing user
                 localStorage.setItem("guestUser", JSON.stringify(existingUserData));
+
+                // If there's a room ID, attempt to join the room
+                if (roomId) {
+                    await handleRoomJoinAfterAuth(existingUserData, roomId);
+                }
             } else {
-                // If user doesn't exist, create new guest user
                 await setDoc(userRef, guestData);
                 setUser(guestData);
                 setIsGuest(true);
                 setIsNameInputVisible(false);
-
-                // Save guest data to localStorage for persistence
                 localStorage.setItem("guestUser", JSON.stringify(guestData));
+
+                // If there's a room ID, attempt to join the room
+                if (roomId) {
+                    await handleRoomJoinAfterAuth(guestData, roomId);
+                }
             }
         } catch (error) {
             console.error("Error saving guest data:", error);
@@ -113,6 +118,10 @@ function MainPage() {
 
     // Check for authenticated user or guest on page load
     useEffect(() => {
+        // Check for room ID in URL query parameters
+        const searchParams = new URLSearchParams(location.search);
+        const inviteRoomId = searchParams.get('roomId');
+
         // Firebase Auth: Check for authenticated user
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
@@ -123,7 +132,11 @@ function MainPage() {
                     isGuest: false,
                 };
                 setUser(userData);
-                console.log("Authenticated user restored:", userData);
+
+                // If there's an invite room ID, try to join the room
+                if (inviteRoomId) {
+                    handleRoomJoinAfterAuth(userData, inviteRoomId);
+                }
             }
         });
 
@@ -133,11 +146,20 @@ function MainPage() {
             const guestData = JSON.parse(storedGuest);
             setUser(guestData);
             setIsGuest(true);
-            console.log("Guest user restored:", guestData);
+
+            // If there's an invite room ID, try to join the room
+            if (inviteRoomId) {
+                handleRoomJoinAfterAuth(guestData, inviteRoomId);
+            }
+        }
+
+        // Set roomId if invite link is present
+        if (inviteRoomId) {
+            setRoomId(inviteRoomId);
         }
 
         return () => unsubscribe(); // Cleanup on unmount
-    }, []);
+    }, [location]);
 
     // Function to create a room
     const hostGame = async () => {
@@ -151,16 +173,17 @@ function MainPage() {
             const roomRef = doc(db, "rooms", shortId);
             await setDoc(roomRef, {
                 roomId: shortId,
+                ownerName: user.name, // Add owner ID
                 participants: [
                     {
                         id: user.id,
                         name: user.name,
                         isGuest,
+                        isOwner: true, // Mark the creator as owner
                     },
-                ],
+                ]
             });
 
-            console.log("Room created with ID:", shortId);
             navigate(`/room/${shortId}`);
         } catch (error) {
             console.error("Error creating room:", error);
@@ -183,17 +206,56 @@ function MainPage() {
                 await updateDoc(roomRef, {
                     participants: [
                         ...roomData.participants,
-                        { id: user.id, name: user.name, isGuest },
+                        { id: user.id, name: user.name, isGuest, isOwner: false },
                     ],
                 });
 
-                console.log("Joined room:", roomId);
                 navigate(`/room/${roomId}`);
             } else {
                 alert("Room not found");
             }
         } catch (error) {
             console.error("Error joining room:", error);
+        }
+    };
+
+    const handleRoomJoinAfterAuth = async (user, roomId) => {
+        try {
+            const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
+
+                // Check if user is already in the room
+                const isAlreadyInRoom = roomData.participants.some(
+                    participant => participant.id === user.id
+                );
+
+                if (!isAlreadyInRoom) {
+                    // Add user to the room
+                    await updateDoc(roomRef, {
+                        participants: [
+                            ...roomData.participants,
+                            {
+                                id: user.id,
+                                name: user.name,
+                                isGuest: user.isGuest || false
+                            }
+                        ]
+                    });
+                }
+
+                // Navigate to the room
+                navigate(`/room/${roomId}`);
+            } else {
+                alert("Room not found");
+                navigate("/");
+            }
+        } catch (error) {
+            console.error("Error joining room:", error);
+            alert("Failed to join room");
+            navigate("/");
         }
     };
 
