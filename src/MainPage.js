@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {useLocation, useNavigate} from "react-router-dom";
 import { db } from "./firebaseConfig";
-import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
+import {setDoc, getDoc, doc, updateDoc, collection, addDoc} from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, updateProfile, browserLocalPersistence} from "firebase/auth";
 
 const auth = getAuth();
@@ -173,16 +173,17 @@ function MainPage() {
             const roomRef = doc(db, "rooms", shortId);
             await setDoc(roomRef, {
                 roomId: shortId,
+                ownerName: user.name, // Add owner ID
                 participants: [
                     {
                         id: user.id,
                         name: user.name,
                         isGuest,
+                        isOwner: true, // Mark the creator as owner
                     },
-                ],
+                ]
             });
 
-            console.log("Room created with ID:", shortId);
             navigate(`/room/${shortId}`);
         } catch (error) {
             console.error("Error creating room:", error);
@@ -205,11 +206,10 @@ function MainPage() {
                 await updateDoc(roomRef, {
                     participants: [
                         ...roomData.participants,
-                        { id: user.id, name: user.name, isGuest },
+                        { id: user.id, name: user.name, isGuest, isOwner: false },
                     ],
                 });
 
-                console.log("Joined room:", roomId);
                 navigate(`/room/${roomId}`);
             } else {
                 alert("Room not found");
