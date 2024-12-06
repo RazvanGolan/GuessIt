@@ -13,6 +13,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
 import ChatBox from "./ChatBox";
 import QRCodeComponent from "./QRCodeComponent";
+import GameSettings from "./GameSettings";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -23,6 +24,7 @@ function GameRoom() {
     const [isUserJoined, setIsUserJoined] = useState(false);
     const [isRoomOwner, setIsRoomOwner] = useState(false);
     const [copyStatus, setCopyStatus] = useState('Invite Link');
+    const [gameSettings, setGameSettings] = useState(null);
     const auth = getAuth();
 
     // Function to join the room
@@ -102,6 +104,11 @@ function GameRoom() {
                     }
 
                     setIsRoomOwner(userParticipant?.isOwner || false);
+                }
+
+                // Update game settings when they change
+                if (roomData.gameSettings) {
+                    setGameSettings(roomData.gameSettings);
                 }
 
                 // Check if room still exists
@@ -308,9 +315,6 @@ function GameRoom() {
             <div>
                 <button onClick={handleManualLeave}>Leave Room</button>
                 <button onClick={handleInviteLink}>{copyStatus}</button>
-                {isRoomOwner && (
-                    <button onClick={() => alert("Start Game clicked!")}>Start Game</button>
-                )}
                 <QRCodeComponent />
             </div>
             {currentUser && (
@@ -319,6 +323,15 @@ function GameRoom() {
                     currentUser={currentUser}
                 />
             )}
+            <GameSettings
+                roomId={roomId}
+                isRoomOwner={isRoomOwner}
+                initialSettings={gameSettings}
+                onStartGame={(settings) => {
+                    // Optional: Additional game start logic
+                    console.log('Game starting with settings:', settings);
+                }}
+            />
         </div>
     );
 }
