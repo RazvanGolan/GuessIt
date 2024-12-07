@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {doc, updateDoc, onSnapshot, collection, addDoc, getDoc} from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
@@ -8,11 +8,14 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         currentRound: 1,
         currentDrawer: null,
         timeRemaining: gameSettings.drawTime,
-        completedDrawers: []
+        completedDrawers: [],
+        wordSelectionTime: 10,
+        selectedWord: null,
+        availableWords: []
     });
 
     const isProcessing = useRef(false);
-    const [words, setWords] = useState(null)
+    const [words, setWords] = useState(null);
 
     // Start the game (only by room owner)
     const startGame = async () => {
@@ -31,20 +34,26 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             const customWords = gameSettings.customWords
                 ? gameSettings.customWords.split(",").map(word => word.trim())
                 : [];
-            console.log(customWords)
+
             const combinedWords = [...defaultWords, ...customWords];
-            setWords(combinedWords)
+            setWords(combinedWords);
             const roomRef = doc(db, "rooms", roomId);
 
             // Select first drawer (first participant)
             const firstDrawer = participants[0];
+
+            // Select random words for the first drawer
+            const selectedWords = getRandomWords(combinedWords, gameSettings.wordCount);
 
             const initialGameStatus = {
                 isGameActive: true,
                 currentRound: 1,
                 currentDrawer: firstDrawer.id,
                 timeRemaining: gameSettings.drawTime,
-                completedDrawers: []
+                completedDrawers: [],
+                wordSelectionTime: 10,
+                selectedWord: null,
+                availableWords: selectedWords
             };
 
             await updateDoc(roomRef, {
@@ -54,7 +63,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             // Announce game start
             const messagesRef = collection(db, "rooms", roomId, "messages");
             await addDoc(messagesRef, {
-                text: `Game is starting! First round begins. ${firstDrawer.name} is now drawing!`,
+                text: `Game is starting! First round begins. ${firstDrawer.name} is now choosing a word to draw!`,
                 sender: { id: "system", name: "System" },
                 timestamp: new Date()
             });
@@ -63,27 +72,83 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         }
     };
 
+    // Helper function to get random words
+    const getRandomWords = (wordList, count) => {
+        const shuffled = [...wordList].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
+    };
+
+    // Select a word for drawing
+    const selectWord = async (word) => {
+        if (gameState.currentDrawer !== currentUser.id) return;
+
+        try {
+            const roomRef = doc(db, "rooms", roomId);
+
+            const updatedGameStatus = {
+                ...gameState,
+                selectedWord: word,
+                wordSelectionTime: 0 // Trigger word selection phase to end
+            };
+
+            await updateDoc(roomRef, {
+                gameStatus: updatedGameStatus
+            });
+
+            // Announce word selection (without revealing the word)
+            const messagesRef = collection(db, "rooms", roomId, "messages");
+            await addDoc(messagesRef, {
+                text: `${currentUser.name} has selected a word to draw!`,
+                sender: { id: "system", name: "System" },
+                timestamp: new Date()
+            });
+        } catch (error) {
+            console.error("Error selecting word:", error);
+        }
+    };
+
     // Manage game timer and round progression
     useEffect(() => {
         let timer;
 
-        if (gameState.isGameActive && gameState.timeRemaining > 0) {
-            timer = setInterval(() => {
-                setGameState(prev => ({
-                    ...prev,
-                    timeRemaining: prev.timeRemaining - 1
-                }));
-            }, 1000);
-        } else if (gameState.timeRemaining === 0 && !isProcessing.current) {
-            // Prevent multiple executions
-            isProcessing.current = true;
-            handleTimeExpired().finally(() => {
-                isProcessing.current = false; // Reset after execution
-            });
+        if (gameState.isGameActive) {
+            // Word selection timer
+            if (gameState.wordSelectionTime > 0) {
+                timer = setInterval(() => {
+                    setGameState(prev => {
+                        // If it's the last second and no word selected, automatically select first word
+                        if (prev.wordSelectionTime === 1 && !prev.selectedWord) {
+                            // Trigger word selection for the first word
+                            if (prev.currentDrawer === currentUser.id) {
+                                selectWord(prev.availableWords[0]);
+                            }
+                        }
+                        return {
+                            ...prev,
+                            wordSelectionTime: prev.wordSelectionTime - 1
+                        };
+                    });
+                }, 1000);
+            }
+            // Drawing timer
+            else if (gameState.timeRemaining > 0) {
+                timer = setInterval(() => {
+                    setGameState(prev => ({
+                        ...prev,
+                        timeRemaining: prev.timeRemaining - 1
+                    }));
+                }, 1000);
+            } else if (gameState.timeRemaining === 0 && !isProcessing.current) {
+                // Prevent multiple executions
+                isProcessing.current = true;
+                handleTimeExpired().finally(() => {
+                    isProcessing.current = false; // Reset after execution
+                });
+            }
         }
 
         return () => clearInterval(timer);
-    }, [gameState.isGameActive, gameState.timeRemaining]);
+    }, [gameState.isGameActive, gameState.timeRemaining, gameState.wordSelectionTime]);
 
     // Handle time expiration or drawer change
     const handleTimeExpired = async () => {
@@ -106,11 +171,19 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
             if (remainingDrawers.length > 0) {
                 // Move to next drawer in the same round
+                const nextDrawer = remainingDrawers[0];
+
+                // Select random words for the next drawer
+                const selectedWords = getRandomWords(words, gameSettings.wordCount);
+
                 updatedGameStatus = {
                     ...gameState,
-                    currentDrawer: remainingDrawers[0].id,
+                    currentDrawer: nextDrawer.id,
                     timeRemaining: gameSettings.drawTime,
-                    completedDrawers: updatedCompletedDrawers
+                    completedDrawers: updatedCompletedDrawers,
+                    wordSelectionTime: 10,
+                    selectedWord: null,
+                    availableWords: selectedWords
                 };
             } else {
                 // All players have drawn in this round
@@ -123,16 +196,25 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         currentRound: newRound - 1,
                         currentDrawer: null,
                         timeRemaining: 0,
-                        completedDrawers: []
+                        completedDrawers: [],
+                        wordSelectionTime: 0,
+                        selectedWord: null,
+                        availableWords: []
                     };
                 } else {
                     // Start next round
+                    const firstDrawer = participants[0];
+                    const selectedWords = getRandomWords(words, gameSettings.wordCount);
+
                     updatedGameStatus = {
                         currentRound: newRound,
                         isGameActive: true,
-                        currentDrawer: participants[0].id,
+                        currentDrawer: firstDrawer.id,
                         timeRemaining: gameSettings.drawTime,
-                        completedDrawers: []
+                        completedDrawers: [],
+                        wordSelectionTime: 10,
+                        selectedWord: null,
+                        availableWords: selectedWords
                     };
                 }
             }
@@ -145,10 +227,10 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             const messagesRef = collection(db, "rooms", roomId, "messages");
             await addDoc(messagesRef, {
                 text: !updatedGameStatus.isGameActive
-                    ? "Game Over! Final scores will be displayed."
+                    ? "Game Over!"
                     : updatedGameStatus.currentRound > gameState.currentRound
-                        ? `Round ${updatedGameStatus.currentRound} begins. ${participants.find(p => p.id === updatedGameStatus.currentDrawer).name} is now drawing!`
-                        : `${participants.find(p => p.id === updatedGameStatus.currentDrawer).name} is now drawing!`,
+                        ? `Round ${updatedGameStatus.currentRound} begins. ${participants.find(p => p.id === updatedGameStatus.currentDrawer).name} is now choosing a word!`
+                        : `${participants.find(p => p.id === updatedGameStatus.currentDrawer).name} is now choosing a word!`,
                 sender: { id: "system", name: "System" },
                 timestamp: new Date()
             });
@@ -173,7 +255,10 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     currentRound: gameStatus.currentRound,
                     currentDrawer: gameStatus.currentDrawer,
                     timeRemaining: gameStatus.timeRemaining,
-                    completedDrawers: gameStatus.completedDrawers || []
+                    completedDrawers: gameStatus.completedDrawers || [],
+                    wordSelectionTime: gameStatus.wordSelectionTime || 0,
+                    selectedWord: gameStatus.selectedWord || null,
+                    availableWords: gameStatus.availableWords || []
                 });
             }
         });
@@ -188,12 +273,30 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 <div>
                     <h2>Round {gameState.currentRound} of {gameSettings.rounds}</h2>
                     <p>Current Drawer: {participants.find(p => p.id === gameState.currentDrawer)?.name}</p>
-                    <p>Time Remaining: {gameState.timeRemaining} seconds</p>
 
-                    {currentUser?.id === gameState.currentDrawer && (
+                    {/* Word Selection Phase */}
+                    {currentUser?.id === gameState.currentDrawer && gameState.wordSelectionTime > 0 && (
                         <div>
-                            <h3>You are drawing!</h3>
-                            {/* Add drawing canvas or word selection here */}
+                            <h3>Choose a word to draw! ({gameState.wordSelectionTime} seconds left)</h3>
+                            <div>
+                                {gameState.availableWords.map((word, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => selectWord(word)}
+                                    >
+                                        {word}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Drawing Phase */}
+                    {currentUser?.id === gameState.currentDrawer && gameState.wordSelectionTime === 0 && (
+                        <div>
+                            <h3>You are drawing: {gameState.selectedWord}</h3>
+                            <p>Time Remaining: {gameState.timeRemaining} seconds</p>
+                            {/* Add drawing canvas or word guessing logic here */}
                         </div>
                     )}
 

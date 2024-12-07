@@ -109,7 +109,7 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings }) => {
                 <label>Word Count:</label>
                 {renderDropdown(
                     settings.wordCount,
-                    Array.from({length: 5}, (_, i) => i + 1),
+                    Array.from({length: 5}, (_, i) => i + 2),
                     (val) => handleSettingChange('wordCount', val)
                 )}
             </div>
