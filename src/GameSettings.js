@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc } from "firebase/firestore";
+import {doc, getDoc, updateDoc} from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
-const GameSettings = ({ roomId, isRoomOwner, initialSettings, onStartGame }) => {
+const GameSettings = ({ roomId, isRoomOwner, initialSettings }) => {
     const defaultSettings = (initialSettings) => ({
         maxPlayers: initialSettings?.maxPlayers || 4,
         drawTime: initialSettings?.drawTime || 90,
@@ -13,6 +13,7 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings, onStartGame }) => 
     });
 
     const [settings, setSettings] = useState(defaultSettings(initialSettings));
+    const [isGameActive, setIsGameActive] = useState(null)
 
     useEffect(() => {
         setSettings(defaultSettings(initialSettings));
@@ -23,6 +24,13 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings, onStartGame }) => 
 
         try {
             const roomRef = doc(db, "rooms", roomId);
+            const roomSnap = await getDoc(roomRef);
+
+            if (roomSnap.exists()) {
+                const roomData = roomSnap.data();
+                setIsGameActive(roomData.gameStatus?.isGameActive)
+            }
+
             await updateDoc(roomRef, {
                 gameSettings: settings
             });
@@ -47,7 +55,7 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings, onStartGame }) => 
 
     // Render function for dropdowns based on room owner status
     const renderDropdown = (value, options, onChange) => {
-        if (isRoomOwner) {
+        if (isRoomOwner && !isGameActive) {
             return (
                 <select
                     value={value}
@@ -81,7 +89,7 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings, onStartGame }) => 
                 <label>Draw Time (seconds):</label>
                 {renderDropdown(
                     settings.drawTime,
-                    [30, 45, 60, 75, 90, 120, 150, 180],
+                    [10, 30, 45, 60, 75, 90, 120, 150, 180],
                     (val) => handleSettingChange('drawTime', val)
                 )}
             </div>
@@ -129,12 +137,6 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings, onStartGame }) => 
                     <p>{settings.customWords || 'No custom words'}</p>
                 )}
             </div>
-
-            {isRoomOwner && (
-                <button onClick={() => onStartGame(settings)}>
-                    Start Game
-                </button>
-            )}
         </div>
     );
 };

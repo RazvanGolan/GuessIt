@@ -211,6 +211,22 @@ function MainPage() {
 
             if (roomSnap.exists()) {
                 const roomData = roomSnap.data();
+
+                // Check if game is currently active
+                if (roomData.gameStatus?.isGameActive) {
+                    alert("Game is currently in progress. Cannot join right now.");
+                    navigate("/");
+                    return;
+                }
+
+                // Check if room has reached max players
+                const maxPlayers = roomData.gameSettings?.maxPlayers || 4;
+                if (roomData.participants.length >= maxPlayers) {
+                    alert("Room is full. Cannot join.");
+                    navigate("/");
+                    return;
+                }
+
                 await updateDoc(roomRef, {
                     participants: [
                         ...roomData.participants,
@@ -234,6 +250,21 @@ function MainPage() {
 
             if (roomSnap.exists()) {
                 const roomData = roomSnap.data();
+
+                // Check if game is currently active
+                if (roomData.gameStatus?.isGameActive) {
+                    alert("Game is currently in progress. Cannot join right now.");
+                    navigate("/");
+                    return;
+                }
+
+                // Check if room has reached max players
+                const maxPlayers = roomData.gameSettings?.maxPlayers || 4;
+                if (roomData.participants.length >= maxPlayers) {
+                    alert("Room is full. Cannot join.");
+                    navigate("/");
+                    return;
+                }
 
                 // Check if user is already in the room
                 const isAlreadyInRoom = roomData.participants.some(
