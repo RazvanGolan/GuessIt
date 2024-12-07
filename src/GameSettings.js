@@ -132,6 +132,7 @@ const GameSettings = ({ roomId, isRoomOwner, initialSettings }) => {
                         value={settings.customWords}
                         onChange={(e) => handleSettingChange('customWords', e.target.value)}
                         placeholder="Enter custom words, separated by commas"
+                        disabled={isGameActive}
                     />
                 ) : (
                     <p>{settings.customWords || 'No custom words'}</p>

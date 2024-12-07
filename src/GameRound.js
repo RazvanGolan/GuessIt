@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef} from 'react';
-import { doc, updateDoc, onSnapshot, collection, addDoc } from "firebase/firestore";
+import {doc, updateDoc, onSnapshot, collection, addDoc, getDoc} from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
 const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwner }) => {
@@ -12,12 +12,28 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
     });
 
     const isProcessing = useRef(false);
+    const [words, setWords] = useState(null)
 
     // Start the game (only by room owner)
     const startGame = async () => {
         if (!isRoomOwner) return;
 
         try {
+            const wordsDocRef = doc(db, "words", "words");
+            const docSnap = await getDoc(wordsDocRef);
+            let defaultWords = [];
+            if (docSnap.exists()) {
+                defaultWords = docSnap.data().words || [];
+            } else {
+                console.error("No default words found in Firestore.");
+            }
+
+            const customWords = gameSettings.customWords
+                ? gameSettings.customWords.split(",").map(word => word.trim())
+                : [];
+            console.log(customWords)
+            const combinedWords = [...defaultWords, ...customWords];
+            setWords(combinedWords)
             const roomRef = doc(db, "rooms", roomId);
 
             // Select first drawer (first participant)
