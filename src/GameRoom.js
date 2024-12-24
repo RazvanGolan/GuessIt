@@ -13,6 +13,8 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
 import ChatBox from "./ChatBox";
 import QRCodeComponent from "./QRCodeComponent";
+import GameSettings from "./GameSettings";
+import GameRound from "./GameRound";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -23,6 +25,7 @@ function GameRoom() {
     const [isUserJoined, setIsUserJoined] = useState(false);
     const [isRoomOwner, setIsRoomOwner] = useState(false);
     const [copyStatus, setCopyStatus] = useState('Invite Link');
+    const [gameSettings, setGameSettings] = useState({ maxPlayers: 4, drawTime: 90, rounds: 3, wordCount: 3, hints: 2, customWords: '' });
     const auth = getAuth();
 
     // Function to join the room
@@ -35,6 +38,21 @@ function GameRoom() {
 
             if (roomSnap.exists()) {
                 const roomData = roomSnap.data();
+
+                // Check if game is currently active
+                if (roomData.gameStatus?.isGameActive) {
+                    alert("Game is currently in progress. Cannot join right now.");
+                    navigate("/");
+                    return;
+                }
+
+                // Check if room has reached max players
+                const maxPlayers = roomData.gameSettings?.maxPlayers || 4;
+                if (roomData.participants.length >= maxPlayers) {
+                    alert("Room is full. Cannot join.");
+                    navigate("/");
+                    return;
+                }
 
                 // Check if user is already in the room
                 const isAlreadyInRoom = roomData.participants.some(
@@ -102,6 +120,11 @@ function GameRoom() {
                     }
 
                     setIsRoomOwner(userParticipant?.isOwner || false);
+                }
+
+                // Update game settings when they change
+                if (roomData.gameSettings) {
+                    setGameSettings(roomData.gameSettings);
                 }
 
                 // Check if room still exists
@@ -308,9 +331,6 @@ function GameRoom() {
             <div>
                 <button onClick={handleManualLeave}>Leave Room</button>
                 <button onClick={handleInviteLink}>{copyStatus}</button>
-                {isRoomOwner && (
-                    <button onClick={() => alert("Start Game clicked!")}>Start Game</button>
-                )}
                 <QRCodeComponent />
             </div>
             {currentUser && (
@@ -319,6 +339,18 @@ function GameRoom() {
                     currentUser={currentUser}
                 />
             )}
+            <GameSettings
+                roomId={roomId}
+                isRoomOwner={isRoomOwner}
+                initialSettings={gameSettings}
+            />
+            <GameRound
+                roomId={roomId}
+                participants={participants}
+                gameSettings={gameSettings}
+                currentUser={currentUser}
+                isRoomOwner={isRoomOwner}
+            />
         </div>
     );
 }

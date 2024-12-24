@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "./firebaseConfig";
-import {setDoc, getDoc, doc, updateDoc, collection, addDoc} from "firebase/firestore";
+import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, updateProfile, browserLocalPersistence} from "firebase/auth";
 
 const auth = getAuth();
@@ -181,7 +181,15 @@ function MainPage() {
                         isGuest,
                         isOwner: true, // Mark the creator as owner
                     },
-                ]
+                ],
+                gameSettings: {
+                    maxPlayers: 4,
+                    drawTime: 90,
+                    rounds: 3,
+                    wordCount: 3,
+                    hints: 2,
+                    customWords: ''
+                }
             });
 
             navigate(`/room/${shortId}`);
@@ -203,6 +211,22 @@ function MainPage() {
 
             if (roomSnap.exists()) {
                 const roomData = roomSnap.data();
+
+                // Check if game is currently active
+                if (roomData.gameStatus?.isGameActive) {
+                    alert("Game is currently in progress. Cannot join right now.");
+                    navigate("/");
+                    return;
+                }
+
+                // Check if room has reached max players
+                const maxPlayers = roomData.gameSettings?.maxPlayers || 4;
+                if (roomData.participants.length >= maxPlayers) {
+                    alert("Room is full. Cannot join.");
+                    navigate("/");
+                    return;
+                }
+
                 await updateDoc(roomRef, {
                     participants: [
                         ...roomData.participants,
@@ -226,6 +250,21 @@ function MainPage() {
 
             if (roomSnap.exists()) {
                 const roomData = roomSnap.data();
+
+                // Check if game is currently active
+                if (roomData.gameStatus?.isGameActive) {
+                    alert("Game is currently in progress. Cannot join right now.");
+                    navigate("/");
+                    return;
+                }
+
+                // Check if room has reached max players
+                const maxPlayers = roomData.gameSettings?.maxPlayers || 4;
+                if (roomData.participants.length >= maxPlayers) {
+                    alert("Room is full. Cannot join.");
+                    navigate("/");
+                    return;
+                }
 
                 // Check if user is already in the room
                 const isAlreadyInRoom = roomData.participants.some(
