@@ -295,13 +295,18 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     )}
 
                     {/* Drawing Phase */}
-                    {currentUser?.id === gameState.currentDrawer && gameState.wordSelectionTime === 0 && (
+                    {gameState.wordSelectionTime === 0 && (
                         <div>
-                            <h3>You are drawing: {gameState.selectedWord}</h3>
+                            {currentUser?.id === gameState.currentDrawer ? (
+                                <h3>You are drawing: {gameState.selectedWord}</h3>
+                            ) : (
+                                <h3>Word to guess: {gameState.selectedWord ? '_ '.repeat(gameState.selectedWord.length) : ''}</h3>
+                            )}
                             <p>Time Remaining: {gameState.timeRemaining} seconds</p>
                             {/* Add drawing canvas or word guessing logic here */}
                         </div>
                     )}
+
 
                     <div>
                         <h4>Drawing Order:</h4>
