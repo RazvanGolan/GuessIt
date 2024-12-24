@@ -116,11 +116,13 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             if (gameState.wordSelectionTime > 0) {
                 timer = setInterval(() => {
                     setGameState(prev => {
-                        // If it's the last second and no word selected, automatically select first word
                         if (prev.wordSelectionTime === 1 && !prev.selectedWord) {
                             // Trigger word selection for the first word
-                            if (prev.currentDrawer === currentUser.id) {
-                                selectWord(prev.availableWords[0]);
+                            if (prev.currentDrawer === currentUser.id && !isProcessing.current) {
+                                isProcessing.current = true; // Prevent re-entry
+                                selectWord(prev.availableWords[0]).finally(() => {
+                                    isProcessing.current = false; // Reset after execution
+                                });
                             }
                         }
                         return {
@@ -149,6 +151,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
         return () => clearInterval(timer);
     }, [gameState.isGameActive, gameState.timeRemaining, gameState.wordSelectionTime]);
+
 
     // Handle time expiration or drawer change
     const handleTimeExpired = async () => {
