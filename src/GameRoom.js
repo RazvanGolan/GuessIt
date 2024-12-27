@@ -28,6 +28,21 @@ function GameRoom() {
     const [gameSettings, setGameSettings] = useState({ maxPlayers: 4, drawTime: 90, rounds: 3, wordCount: 3, hints: 2, customWords: '' });
     const auth = getAuth();
 
+    const [gameStatus, setGameStatus] = useState({
+        isGameActive: false,
+        currentRound: 1,
+        currentDrawer: null,
+        timeRemaining: gameSettings.drawTime,
+        completedDrawers: [],
+        wordSelectionTime: 10,
+        selectedWord: '',
+        availableWords: [],
+        revealedHints: [],
+        nextHintTime: null,
+        guessedPlayers: [], // New
+        playerScores: participants.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {}) // New
+    });
+
     // Function to join the room
     const joinRoom = useCallback(async (user) => {
         if (!user || isUserJoined) return;
@@ -125,6 +140,10 @@ function GameRoom() {
                 // Update game settings when they change
                 if (roomData.gameSettings) {
                     setGameSettings(roomData.gameSettings);
+                }
+
+                if (roomData?.gameStatus) {
+                    setGameStatus(roomData.gameStatus);
                 }
 
                 // Check if room still exists
@@ -302,6 +321,19 @@ function GameRoom() {
         }
     };
 
+    const updateGameStatus = async (newState) => {
+        try {
+            const gameDocRef = doc(db, "rooms", roomId);
+
+            // If the new state is a function (React updater), resolve it first
+            const resolvedState = typeof newState === "function" ? newState(gameStatus) : newState;
+
+            await updateDoc(gameDocRef, { gameStatus: resolvedState });
+        } catch (error) {
+            console.error("Error updating game status:", error);
+        }
+    };
+
     // Render the room UI
     if (!isRoomActive) {
         return <div>Room is no longer active. Redirecting...</div>;
@@ -337,6 +369,8 @@ function GameRoom() {
                 <ChatBox
                     roomId={roomId}
                     currentUser={currentUser}
+                    gameSettings={gameSettings}
+                    gameStatus={gameStatus}
                 />
             )}
             <GameSettings
@@ -350,6 +384,8 @@ function GameRoom() {
                 gameSettings={gameSettings}
                 currentUser={currentUser}
                 isRoomOwner={isRoomOwner}
+                gameStatus={gameStatus}
+                updateGameStatus={updateGameStatus}
             />
         </div>
     );

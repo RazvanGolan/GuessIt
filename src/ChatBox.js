@@ -5,12 +5,12 @@ import {
     query,
     orderBy,
     limit,
-    onSnapshot
+    onSnapshot, getDoc, doc, updateDoc
 } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import './ChatBox.css'; // Import the CSS file
 
-function ChatBox({ roomId, currentUser }) {
+function ChatBox({ roomId, currentUser, gameSettings, gameStatus }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const messagesEndRef = useRef(null);
@@ -49,20 +49,51 @@ function ChatBox({ roomId, currentUser }) {
 
         try {
             const messagesRef = collection(db, "rooms", roomId, "messages");
-            await addDoc(messagesRef, {
-                text: newMessage,
-                sender: {
-                    id: currentUser.id,
-                    name: currentUser.name
-                },
-                timestamp: new Date()
-            });
+            const roomRef = doc(db, "rooms", roomId);
+            const roomDoc = await getDoc(roomRef);
+
+            if (!roomDoc.exists()) return;
+
+            if (
+                gameStatus.isGameActive &&
+                gameStatus.selectedWord.toLowerCase() === newMessage.trim().toLowerCase() &&
+                !gameStatus.guessedPlayers.includes(currentUser.id) &&
+                gameStatus.currentDrawer !== currentUser.id
+            ) {
+                // Award points
+                const pointsAwarded = Math.ceil(gameStatus.timeRemaining / gameSettings.drawTime * 100); // Example logic
+                const updatedScores = { ...gameStatus.playerScores, [currentUser.id]: gameStatus.playerScores[currentUser.id] + pointsAwarded };
+
+                await updateDoc(roomRef, {
+                    "gameStatus.guessedPlayers": [...gameStatus.guessedPlayers, currentUser.id],
+                    "gameStatus.playerScores": updatedScores
+                });
+
+                // Notify guess
+                await addDoc(messagesRef, {
+                    text: `${currentUser.name} guessed the word! (+${pointsAwarded} points)`,
+                    sender: { id: "system", name: "System" },
+                    timestamp: new Date()
+                });
+            }
+
+            // Send message
+            if (gameStatus.selectedWord.toLowerCase() !== newMessage.trim().toLowerCase())
+            {
+                await addDoc(messagesRef, {
+                    text: newMessage,
+                    sender: { id: currentUser.id, name: currentUser.name },
+                    timestamp: new Date()
+                });
+            }
 
             setNewMessage('');
         } catch (error) {
             console.error("Error sending message:", error);
         }
-    }, [newMessage, currentUser, roomId]);
+    }, [newMessage, currentUser, roomId, gameSettings]);
+
+
     return (
         <div className="chat-container">
             <div className="messages-list">
