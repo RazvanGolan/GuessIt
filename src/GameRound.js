@@ -5,8 +5,275 @@ import { db } from "./firebaseConfig";
 const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwner, gameStatus, updateGameStatus }) => {
     const isProcessing = useRef(false);
     const [words, setWords] = useState(null);
+    const messageDebounceRef = useRef(null);
 
-    // Start the game (only by room owner)
+    const getRandomWords = (wordList, count) => {
+        const shuffled = [...wordList].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, count);
+    };
+
+    const calculateHintTimes = (drawTime, numHints) => {
+        if (!drawTime || !numHints) return [];
+        const interval = Math.floor(drawTime / (numHints + 1));
+        return Array.from({ length: numHints }, (_, i) => drawTime - interval * (i + 1));
+    };
+
+    const getRandomUnrevealedPosition = (word, revealedPositions) => {
+        if (!word || !revealedPositions) return null;
+        const availablePositions = Array.from({ length: word.length })
+            .map((_, i) => i)
+            .filter(pos => !revealedPositions.includes(pos));
+        return availablePositions.length > 0
+            ? availablePositions[Math.floor(Math.random() * availablePositions.length)]
+            : null;
+    };
+
+    // Add message with debouncing
+    const addSystemMessage = useCallback(async (message) => {
+        // Clear any pending message
+        if (messageDebounceRef.current) {
+            clearTimeout(messageDebounceRef.current);
+        }
+
+        messageDebounceRef.current = setTimeout(async () => {
+            try {
+                const messagesRef = collection(db, "rooms", roomId, "messages");
+                await addDoc(messagesRef, {
+                    text: message,
+                    sender: { id: "system", name: "System" },
+                    timestamp: new Date()
+                });
+            } catch (error) {
+                console.error("Error adding system message:", error);
+            }
+        }, 500); // Debounce time of 500ms
+    }, [roomId]);
+
+    const advanceGame = useCallback(async (reason = 'time_expired') => {
+        if (!isRoomOwner || isProcessing.current) return;
+        isProcessing.current = true;
+
+        try {
+            const updatedCompletedDrawers = [
+                ...gameStatus.completedDrawers,
+                gameStatus.currentDrawer,
+            ];
+
+            // Check if all players have drawn in this round
+            const roundComplete = updatedCompletedDrawers.length === participants.length;
+
+            let updatedGameStatus;
+            let message = '';
+
+            if (roundComplete) {
+                // Start new round
+                const newRound = gameStatus.currentRound + 1;
+
+                if (newRound > gameSettings.rounds) {
+                    // Game over
+                    updatedGameStatus = {
+                        ...gameStatus,
+                        isGameActive: false,
+                        currentRound: gameStatus.currentRound,
+                        currentDrawer: null,
+                        timeRemaining: 0,
+                        completedDrawers: [],
+                        wordSelectionTime: 0,
+                        selectedWord: null,
+                        availableWords: [],
+                        guessedPlayers: [],
+                        revealedHints: [],
+                        nextHintTime: null
+                    };
+                    message = "Game Over!";
+                } else {
+                    // Reset for new round
+                    const firstDrawer = participants[0];
+                    const selectedWords = getRandomWords(words, gameSettings.wordCount);
+
+                    updatedGameStatus = {
+                        ...gameStatus,
+                        currentRound: newRound,
+                        currentDrawer: firstDrawer.id,
+                        timeRemaining: gameSettings.drawTime,
+                        completedDrawers: [], // Reset completed drawers for new round
+                        wordSelectionTime: 10,
+                        selectedWord: null,
+                        availableWords: selectedWords,
+                        guessedPlayers: [],
+                        revealedHints: [],
+                        nextHintTime: null
+                    };
+                    message = `Round ${newRound} begins! ${firstDrawer.name} is now choosing a word!`;
+                }
+            } else {
+                // Continue current round with next drawer
+                const remainingDrawers = participants.filter(
+                    (p) => !updatedCompletedDrawers.includes(p.id)
+                );
+                const nextDrawer = remainingDrawers[0];
+                const selectedWords = getRandomWords(words, gameSettings.wordCount);
+
+                updatedGameStatus = {
+                    ...gameStatus,
+                    currentDrawer: nextDrawer.id,
+                    timeRemaining: gameSettings.drawTime,
+                    completedDrawers: updatedCompletedDrawers,
+                    wordSelectionTime: 10,
+                    selectedWord: null,
+                    availableWords: selectedWords,
+                    guessedPlayers: [],
+                    revealedHints: [],
+                    nextHintTime: null
+                };
+                message = `${nextDrawer.name} is now choosing a word!`;
+            }
+
+            await updateGameStatus(updatedGameStatus);
+
+            // Add system message with debouncing
+            const finalMessage = reason === 'all_guessed'
+                ? `Everyone has guessed correctly! ${message}`
+                : message;
+
+            await addSystemMessage(finalMessage);
+
+        } catch (error) {
+            console.error("Error advancing game:", error);
+        } finally {
+            isProcessing.current = false;
+        }
+    }, [isRoomOwner, participants, gameStatus, words, gameSettings, updateGameStatus, addSystemMessage]);
+
+
+    const selectWord = useCallback(async (word) => {
+        if (!word || gameStatus.currentDrawer !== currentUser.id) return;
+
+        try {
+            const hintTimes = calculateHintTimes(gameSettings.drawTime, gameSettings.hints);
+
+            const updatedGameStatus = {
+                ...gameStatus,
+                selectedWord: word,
+                wordSelectionTime: 0,
+                timeRemaining: gameSettings.drawTime,
+                revealedHints: [],
+                nextHintTime: hintTimes[0] || null,
+                guessedPlayers: [] // Reset guessed players when new word is selected
+            };
+
+            await updateGameStatus(updatedGameStatus);
+
+            const messagesRef = collection(db, "rooms", roomId, "messages");
+            await addDoc(messagesRef, {
+                text: `${currentUser.name} has selected a word to draw!`,
+                sender: { id: "system", name: "System" },
+                timestamp: new Date()
+            });
+        } catch (error) {
+            console.error("Error selecting word:", error);
+        }
+    }, [currentUser?.id, gameStatus, gameSettings.drawTime, gameSettings.hints, updateGameStatus, roomId]);
+
+    // Check if all players have guessed
+    useEffect(() => {
+        if (gameStatus.isGameActive && gameStatus.selectedWord) {
+            const nonDrawerCount = participants.length - 1; // Exclude the drawer
+            const allPlayersGuessed = gameStatus.guessedPlayers.length === nonDrawerCount;
+
+            if (allPlayersGuessed && !isProcessing.current) {
+                // Set timer to 0 to trigger game advancement
+                updateGameStatus(prev => ({
+                    ...prev,
+                    timeRemaining: 0
+                }));
+                advanceGame('all_guessed');
+            }
+        }
+    }, [gameStatus.guessedPlayers, participants.length, gameStatus.isGameActive, gameStatus.selectedWord, advanceGame, updateGameStatus]);
+
+    // Timer effect
+    useEffect(() => {
+        let timer;
+
+        const updateTimer = () => {
+            if (!gameStatus.isGameActive || isProcessing.current) return;
+
+            updateGameStatus(prev => {
+                if (!prev.isGameActive) return prev;
+
+                // Handle word selection countdown
+                if (prev.wordSelectionTime > 0) {
+                    // Auto-select first word if time runs out
+                    if (
+                        prev.wordSelectionTime === 1 &&
+                        !prev.selectedWord &&
+                        prev.currentDrawer === currentUser.id &&
+                        !isProcessing.current
+                    ) {
+                        selectWord(prev.availableWords[0]);
+                    }
+                    return {
+                        ...prev,
+                        wordSelectionTime: prev.wordSelectionTime - 1
+                    };
+                }
+
+                // Handle drawing countdown
+                if (prev.selectedWord && prev.timeRemaining > 0) {
+                    // Handle hints
+                    if (prev.nextHintTime === prev.timeRemaining) {
+                        const newPosition = getRandomUnrevealedPosition(
+                            prev.selectedWord,
+                            prev.revealedHints
+                        );
+                        if (newPosition !== null) {
+                            const hintTimes = calculateHintTimes(
+                                gameSettings.drawTime,
+                                gameSettings.hints
+                            );
+                            const nextTime = hintTimes.find(time => time < prev.timeRemaining);
+
+                            return {
+                                ...prev,
+                                revealedHints: [...prev.revealedHints, newPosition],
+                                nextHintTime: nextTime || null,
+                                timeRemaining: prev.timeRemaining - 1
+                            };
+                        }
+                    }
+                    return {
+                        ...prev,
+                        timeRemaining: prev.timeRemaining - 1
+                    };
+                }
+
+                // Handle time expiration
+                if (prev.timeRemaining === 0 && !isProcessing.current) {
+                    advanceGame('time_expired');
+                }
+
+                return prev;
+            });
+        };
+
+        if (gameStatus.isGameActive) {
+            timer = setInterval(updateTimer, 1000);
+        }
+
+        return () => {
+            if (timer) clearInterval(timer);
+        };
+    }, [
+        gameStatus.isGameActive,
+        currentUser?.id,
+        selectWord,
+        advanceGame,
+        updateGameStatus,
+        gameSettings.drawTime,
+        gameSettings.hints
+    ]);
+
     const startGame = async () => {
         if (!isRoomOwner) return;
 
@@ -27,10 +294,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             const combinedWords = [...defaultWords, ...customWords];
             setWords(combinedWords);
 
-            // Select first drawer (first participant)
             const firstDrawer = participants[0];
-
-            // Select random words for the first drawer
             const selectedWords = getRandomWords(combinedWords, gameSettings.wordCount);
 
             const initialGameStatus = {
@@ -48,9 +312,9 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 playerScores: participants.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {})
             };
 
-            updateGameStatus(initialGameStatus);
+            isProcessing.current = false;
+            await updateGameStatus(initialGameStatus);
 
-            // Announce game start
             const messagesRef = collection(db, "rooms", roomId, "messages");
             await addDoc(messagesRef, {
                 text: `Game is starting! First round begins. ${firstDrawer.name} is now choosing a word to draw!`,
@@ -59,251 +323,8 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             });
         } catch (error) {
             console.error("Error starting game:", error);
+            isProcessing.current = false;
         }
-    };
-
-    // Helper function to get random words
-    const getRandomWords = (wordList, count) => {
-        const shuffled = [...wordList].sort(() => 0.5 - Math.random());
-        return shuffled.slice(0, count);
-    };
-
-    // Select a word for drawing
-    const selectWord = useCallback(async (word) => {
-        if (!word || gameStatus.currentDrawer !== currentUser.id) return;
-
-        try {
-            const hintTimes = calculateHintTimes(gameSettings.drawTime, gameSettings.hints);
-
-            const updatedGameStatus = {
-                ...gameStatus,
-                selectedWord: word,
-                wordSelectionTime: 0,
-                revealedHints: [],
-                nextHintTime: hintTimes[0] || null
-            };
-
-            updateGameStatus(updatedGameStatus);
-
-            const messagesRef = collection(db, "rooms", roomId, "messages");
-            await addDoc(messagesRef, {
-                text: `${currentUser.name} has selected a word to draw!`,
-                sender: { id: "system", name: "System" },
-                timestamp: new Date()
-            });
-        } catch (error) {
-            console.error("Error selecting word:", error);
-        }
-    }, [currentUser?.id, gameStatus.currentDrawer, gameSettings.drawTime, gameSettings.hints, updateGameStatus]);
-
-    // Manage game timer and round progression
-    useEffect(() => {
-        let timer;
-
-        if (gameStatus.isGameActive) {
-            timer = setInterval(() => {
-                updateGameStatus(prev => {
-                    // Handle word selection countdown
-                    if (prev.wordSelectionTime > 0) {
-                        if (
-                            prev.wordSelectionTime === 1 &&
-                            !prev.selectedWord &&
-                            prev.currentDrawer === currentUser.id &&
-                            !isProcessing.current
-                        ) {
-                            isProcessing.current = true;
-                            selectWord(prev.availableWords[0]).finally(() => {
-                                isProcessing.current = false;
-                            });
-                        }
-                        return {
-                            ...prev,
-                            wordSelectionTime: Math.max(prev.wordSelectionTime - 1, 0),
-                        };
-                    }
-
-                    // Handle drawing countdown
-                    if (prev.wordSelectionTime === 0 && prev.timeRemaining > 0) {
-                        // Handle hint reveals
-                        if (prev.nextHintTime === prev.timeRemaining && prev.selectedWord) {
-                            const newPosition = getRandomUnrevealedPosition(
-                                prev.selectedWord,
-                                prev.revealedHints
-                            );
-                            if (newPosition !== null) {
-                                const hintTimes = calculateHintTimes(
-                                    gameSettings.drawTime,
-                                    gameSettings.hints
-                                );
-                                const nextTime = hintTimes.find(time => time < prev.timeRemaining);
-
-                                return {
-                                    ...prev,
-                                    revealedHints: [...prev.revealedHints, newPosition],
-                                    nextHintTime: nextTime || null,
-                                    timeRemaining: Math.max(prev.timeRemaining - 1, 0),
-                                };
-                            }
-                        }
-                        return {
-                            ...prev,
-                            timeRemaining: Math.max(prev.timeRemaining - 1, 0),
-                        };
-                    }
-
-                    // Handle round completion
-                    if (prev.timeRemaining === 0 && !isProcessing.current) {
-                        isProcessing.current = true;
-                        handleTimeExpired().finally(() => {
-                            isProcessing.current = false;
-                        });
-                    }
-
-                    return prev;
-                });
-            }, 1000);
-        }
-
-        return () => clearInterval(timer); // Cleanup interval on unmount
-    }, [
-        gameStatus.isGameActive,
-        gameStatus.timeRemaining,
-        gameStatus.wordSelectionTime,
-        gameStatus.currentDrawer,
-        gameStatus.selectedWord,
-        gameStatus.nextHintTime,
-        gameStatus.revealedHints,
-        currentUser?.id,
-        gameSettings.drawTime,
-        gameSettings.hints,
-        updateGameStatus
-    ]);
-
-    // Handle time expiration or drawer change
-    const handleTimeExpired = useCallback(async () => {
-        isProcessing.current = false;
-
-        if (!isRoomOwner || isProcessing.current) return; // Prevent multiple triggers
-
-        isProcessing.current = true; // Start processing
-
-        try {
-            const updatedCompletedDrawers = [
-                ...gameStatus.completedDrawers,
-                gameStatus.currentDrawer,
-            ];
-
-            const remainingDrawers = participants.filter(
-                (p) => !updatedCompletedDrawers.includes(p.id)
-            );
-
-            let updatedGameStatus;
-
-            if (remainingDrawers.length > 0) {
-                const nextDrawer = remainingDrawers[0];
-                const selectedWords = getRandomWords(words, gameSettings.wordCount);
-
-                updatedGameStatus = {
-                    ...gameStatus,
-                    currentDrawer: nextDrawer.id,
-                    timeRemaining: gameSettings.drawTime,
-                    completedDrawers: updatedCompletedDrawers,
-                    wordSelectionTime: 10,
-                    selectedWord: null,
-                    availableWords: selectedWords,
-                };
-            } else {
-                const newRound = gameStatus.currentRound + 1;
-
-                if (newRound > gameSettings.rounds) {
-                    updatedGameStatus = {
-                        ...gameStatus,
-                        isGameActive: false,
-                        currentRound: newRound - 1,
-                        currentDrawer: null,
-                        timeRemaining: 0,
-                        completedDrawers: [],
-                        wordSelectionTime: 0,
-                        selectedWord: null,
-                        availableWords: [],
-                    };
-                } else {
-                    const firstDrawer = participants[0];
-                    const selectedWords = getRandomWords(words, gameSettings.wordCount);
-
-                    updatedGameStatus = {
-                        ...gameStatus,
-                        currentRound: newRound,
-                        isGameActive: true,
-                        currentDrawer: firstDrawer.id,
-                        timeRemaining: gameSettings.drawTime,
-                        completedDrawers: [],
-                        wordSelectionTime: 10,
-                        selectedWord: null,
-                        availableWords: selectedWords,
-                    };
-                }
-            }
-
-            updateGameStatus(updatedGameStatus);
-
-            const messagesRef = collection(db, "rooms", roomId, "messages");
-            await addDoc(messagesRef, {
-                text: !updatedGameStatus.isGameActive
-                    ? "Game Over!"
-                    : updatedGameStatus.currentRound > gameStatus.currentRound
-                        ? `Round ${updatedGameStatus.currentRound} begins. ${
-                            participants.find(
-                                (p) => p.id === updatedGameStatus.currentDrawer
-                            ).name
-                        } is now choosing a word!`
-                        : `${
-                            participants.find(
-                                (p) => p.id === updatedGameStatus.currentDrawer
-                            ).name
-                        } is now choosing a word!`,
-                sender: { id: "system", name: "System" },
-                timestamp: new Date(),
-            });
-        } catch (error) {
-            console.error("Error handling time expiration:", error);
-        } finally {
-            isProcessing.current = false; // Reset processing flag
-        }
-    }, [isRoomOwner, participants, gameStatus, words, gameSettings, updateGameStatus]);
-
-    useEffect(() => {
-        if (gameStatus.isGameActive) {
-            if (gameStatus.guessedPlayers.length === participants.length - 1 && // All non-drawers guessed
-                !isProcessing.current
-            ) {
-                isProcessing.current = true;
-                handleTimeExpired().finally(() => {
-                    isProcessing.current = false;
-                });
-            }
-        }
-    }, [gameStatus.guessedPlayers, participants.length, gameStatus.isGameActive]);
-
-    // Calculate hint intervals based on draw time and number of hints
-    const calculateHintTimes = (drawTime, numHints) => {
-        if (!drawTime || !numHints) return [];
-        const interval = Math.floor(drawTime / (numHints + 1));
-        return Array.from({ length: numHints }, (_, i) => drawTime - interval * (i + 1));
-    };
-
-    // Get random unrevealed letter positions
-    const getRandomUnrevealedPosition = (word, revealedPositions) => {
-        if (!word || !revealedPositions) return null;
-
-        const availablePositions = Array.from({ length: word.length })
-            .map((_, i) => i)
-            .filter(pos => !revealedPositions.includes(pos));
-
-        if (availablePositions.length === 0) return null;
-
-        const randomIndex = Math.floor(Math.random() * availablePositions.length);
-        return availablePositions[randomIndex];
     };
 
     // Generate masked word with revealed hints
@@ -317,7 +338,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             .join(' ');
     };
 
-    // Render game status and current drawer
+    // Rest of the JSX remains the same as in your original component
     return (
         <div className="game-round-status">
             {gameStatus.isGameActive && (
@@ -325,7 +346,6 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     <h2>Round {gameStatus.currentRound} of {gameSettings.rounds}</h2>
                     <p>Current Drawer: {participants.find(p => p.id === gameStatus.currentDrawer)?.name}</p>
 
-                    {/* Word Selection Phase */}
                     {currentUser?.id === gameStatus.currentDrawer && gameStatus.wordSelectionTime > 0 && (
                         <div>
                             <h3>Choose a word to draw! ({gameStatus.wordSelectionTime} seconds left)</h3>
@@ -342,17 +362,14 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         </div>
                     )}
 
-                    {/* Drawing Phase */}
                     {gameStatus.wordSelectionTime === 0 && (
                         <div>
                             {currentUser?.id === gameStatus.currentDrawer ? (
                                 <h3>You are drawing: {gameStatus.selectedWord}</h3>
                             ) : (
                                 <div>
-                                    <h3>Word to
-                                        guess: {getMaskedWord(gameStatus.selectedWord, gameStatus.revealedHints)}</h3>
-                                    <p>Hints
-                                        remaining: {Math.max(0, (gameSettings.hints || 0) - (gameStatus.revealedHints?.length || 0))}</p>
+                                    <h3>Word to guess: {getMaskedWord(gameStatus.selectedWord, gameStatus.revealedHints)}</h3>
+                                    <p>Hints remaining: {Math.max(0, (gameSettings.hints || 0) - (gameStatus.revealedHints?.length || 0))}</p>
                                 </div>
                             )}
                             <p>Time Remaining: {gameStatus.timeRemaining} seconds</p>
