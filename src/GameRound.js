@@ -205,6 +205,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             await updateGameStatus(prev => {
                 if (!prev.isGameActive) return prev;
 
+                // Handle word selection countdown
                 if (prev.wordSelectionTime > 0) {
                     needsWordSelection = (
                         prev.wordSelectionTime === 1 &&
@@ -224,7 +225,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 }
 
                 // Handle drawing countdown
-                if (prev.selectedWord && prev.timeRemaining > 0) {
+                if (prev.timeRemaining > 0) {
                     // Handle hints
                     if (prev.nextHintTime === prev.timeRemaining) {
                         const newPosition = getRandomUnrevealedPosition(
@@ -254,7 +255,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
                 // Handle time expiration
                 if (prev.timeRemaining === 0 && !isProcessing.current) {
-                    advanceGame('time_expired');
+                    setTimeout(() => advanceGame('time_expired'), 0);
                 }
 
                 return prev;
