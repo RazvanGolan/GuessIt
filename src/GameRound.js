@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {doc, collection, addDoc, getDoc} from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
@@ -69,7 +69,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
     };
 
     // Select a word for drawing
-    const selectWord = async (word) => {
+    const selectWord = useCallback(async (word) => {
         if (!word || gameStatus.currentDrawer !== currentUser.id) return;
 
         try {
@@ -94,7 +94,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         } catch (error) {
             console.error("Error selecting word:", error);
         }
-    };
+    }, [currentUser?.id, gameStatus.currentDrawer, gameSettings.drawTime, gameSettings.hints, updateGameStatus]);
 
     // Manage game timer and round progression
     useEffect(() => {
@@ -103,7 +103,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         if (gameStatus.isGameActive) {
             timer = setInterval(() => {
                 updateGameStatus(prev => {
-                    // Word selection countdown
+                    // Handle word selection countdown
                     if (prev.wordSelectionTime > 0) {
                         if (
                             prev.wordSelectionTime === 1 &&
@@ -122,8 +122,9 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         };
                     }
 
-                    // Drawing countdown
+                    // Handle drawing countdown
                     if (prev.wordSelectionTime === 0 && prev.timeRemaining > 0) {
+                        // Handle hint reveals
                         if (prev.nextHintTime === prev.timeRemaining && prev.selectedWord) {
                             const newPosition = getRandomUnrevealedPosition(
                                 prev.selectedWord,
@@ -150,7 +151,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         };
                     }
 
-                    // Handle time expiration
+                    // Handle round completion
                     if (prev.timeRemaining === 0 && !isProcessing.current) {
                         isProcessing.current = true;
                         handleTimeExpired().finally(() => {
@@ -158,28 +159,40 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         });
                     }
 
-                    return prev; // Return state unchanged if no conditions are met
+                    return prev;
                 });
             }, 1000);
         }
 
-        // Clear timer on cleanup
-        return () => clearInterval(timer);
-    }, [gameStatus.isGameActive, gameStatus.timeRemaining, gameStatus.wordSelectionTime]);
-
+        return () => clearInterval(timer); // Cleanup interval on unmount
+    }, [
+        gameStatus.isGameActive,
+        gameStatus.timeRemaining,
+        gameStatus.wordSelectionTime,
+        gameStatus.currentDrawer,
+        gameStatus.selectedWord,
+        gameStatus.nextHintTime,
+        gameStatus.revealedHints,
+        currentUser?.id,
+        gameSettings.drawTime,
+        gameSettings.hints,
+        updateGameStatus
+    ]);
 
     // Handle time expiration or drawer change
-    const handleTimeExpired = async () => {
-        if (!isRoomOwner) return;
+    const handleTimeExpired = useCallback(async () => {
+        isProcessing.current = false;
+
+        if (!isRoomOwner || isProcessing.current) return; // Prevent multiple triggers
+
+        isProcessing.current = true; // Start processing
 
         try {
-            // Add current drawer to completed drawers
             const updatedCompletedDrawers = [
                 ...gameStatus.completedDrawers,
                 gameStatus.currentDrawer,
             ];
 
-            // Determine next drawer
             const remainingDrawers = participants.filter(
                 (p) => !updatedCompletedDrawers.includes(p.id)
             );
@@ -187,7 +200,6 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             let updatedGameStatus;
 
             if (remainingDrawers.length > 0) {
-                // Move to next drawer in the same round
                 const nextDrawer = remainingDrawers[0];
                 const selectedWords = getRandomWords(words, gameSettings.wordCount);
 
@@ -201,11 +213,9 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     availableWords: selectedWords,
                 };
             } else {
-                // All players have drawn in this round
                 const newRound = gameStatus.currentRound + 1;
 
                 if (newRound > gameSettings.rounds) {
-                    // Game over
                     updatedGameStatus = {
                         ...gameStatus,
                         isGameActive: false,
@@ -218,7 +228,6 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         availableWords: [],
                     };
                 } else {
-                    // Start next round
                     const firstDrawer = participants[0];
                     const selectedWords = getRandomWords(words, gameSettings.wordCount);
 
@@ -236,10 +245,8 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 }
             }
 
-            // Propagate updated game status to the local state
             updateGameStatus(updatedGameStatus);
 
-            // Announce round or game progression
             const messagesRef = collection(db, "rooms", roomId, "messages");
             await addDoc(messagesRef, {
                 text: !updatedGameStatus.isGameActive
@@ -260,9 +267,10 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             });
         } catch (error) {
             console.error("Error handling time expiration:", error);
+        } finally {
+            isProcessing.current = false; // Reset processing flag
         }
-    };
-
+    }, [isRoomOwner, participants, gameStatus, words, gameSettings, updateGameStatus]);
 
     useEffect(() => {
         if (gameStatus.isGameActive) {
