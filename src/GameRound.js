@@ -196,23 +196,27 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
     useEffect(() => {
         let timer;
 
-        const updateTimer = () => {
+        const updateTimer = async () => {
             if (!gameStatus.isGameActive || isProcessing.current) return;
 
-            updateGameStatus(prev => {
+            let needsWordSelection = false;
+            let wordToSelect = null;
+
+            await updateGameStatus(prev => {
                 if (!prev.isGameActive) return prev;
 
-                // Handle word selection countdown
                 if (prev.wordSelectionTime > 0) {
-                    // Auto-select first word if time runs out
-                    if (
+                    needsWordSelection = (
                         prev.wordSelectionTime === 1 &&
                         !prev.selectedWord &&
                         prev.currentDrawer === currentUser.id &&
-                        !isProcessing.current
-                    ) {
-                        selectWord(prev.availableWords[0]);
+                        prev.availableWords?.length > 0
+                    );
+
+                    if (needsWordSelection) {
+                        wordToSelect = prev.availableWords[0];
                     }
+
                     return {
                         ...prev,
                         wordSelectionTime: prev.wordSelectionTime - 1
@@ -255,6 +259,10 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
                 return prev;
             });
+
+            if (needsWordSelection && wordToSelect) {
+                await selectWord(wordToSelect);
+            }
         };
 
         if (gameStatus.isGameActive) {
