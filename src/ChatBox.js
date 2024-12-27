@@ -56,8 +56,8 @@ function ChatBox({ roomId, currentUser, gameSettings, gameStatus }) {
 
             if (
                 gameStatus.isGameActive &&
-                gameStatus.selectedWord.toLowerCase() === newMessage.trim().toLowerCase() &&
-                !gameStatus.guessedPlayers.includes(currentUser.id) &&
+                gameStatus.selectedWord?.toLowerCase() === newMessage.trim().toLowerCase() &&
+                !gameStatus.guessedPlayers?.includes(currentUser.id) &&
                 gameStatus.currentDrawer !== currentUser.id
             ) {
                 // Award points
@@ -78,7 +78,7 @@ function ChatBox({ roomId, currentUser, gameSettings, gameStatus }) {
             }
 
             // Send message
-            if (gameStatus.selectedWord.toLowerCase() !== newMessage.trim().toLowerCase())
+            if (gameStatus.selectedWord?.toLowerCase() !== newMessage.trim().toLowerCase())
             {
                 await addDoc(messagesRef, {
                     text: newMessage,
