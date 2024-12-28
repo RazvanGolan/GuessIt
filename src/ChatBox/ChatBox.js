@@ -7,7 +7,7 @@ import {
     limit,
     onSnapshot, getDoc, doc, updateDoc
 } from "firebase/firestore";
-import { db } from "./firebaseConfig";
+import { db } from "../firebaseConfig";
 import './ChatBox.css'; // Import the CSS file
 
 function ChatBox({ roomId, currentUser, gameSettings, gameStatus }) {

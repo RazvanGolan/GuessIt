@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "./firebaseConfig";
-import ChatBox from "./ChatBox";
+import ChatBox from "./ChatBox/ChatBox";
 import QRCodeComponent from "./QRCodeComponent";
 import GameSettings from "./GameSettings";
 import GameRound from "./GameRound";
