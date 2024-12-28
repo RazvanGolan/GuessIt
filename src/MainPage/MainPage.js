@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { db } from "./firebaseConfig";
+import { db } from "../firebaseConfig";
 import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, updateProfile, browserLocalPersistence} from "firebase/auth";
+import './MainPage.css';
 
 const auth = getAuth();
 
@@ -15,6 +16,7 @@ function MainPage() {
     const [name, setName] = useState("");
     const [guestName, setGuestName] = useState(""); // Track guest name
     const [isNameInputVisible, setIsNameInputVisible] = useState(false); // Show guest name input
+    const [isInputVisible, setIsInputVisible] = useState(false); // State for toggling input visibility
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -299,11 +301,14 @@ function MainPage() {
     };
 
     return (
-        <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h1>Welcome to Guess It!</h1>
+        <div className="bigContainer">
+            <div className="title">
+                <h1 unselectable="on">Guess It</h1>
+            </div>
+            <p unselectable="on">A free online multiplayer drawing and guessing game</p>
 
             {!user && (
-                <>
+                <div className="authentification">
                     <div>
                         <input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
                         <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -312,11 +317,11 @@ function MainPage() {
                         <button onClick={() => handleAuth(true)}>Sign Up</button>
                     </div>
                     <button onClick={handleGuest}>Continue as Guest</button>
-                </>
+                </div>
             )}
 
             {isNameInputVisible && !user && (
-                <>
+                <div className="guestName">
                     <h3>Please enter a name for the guest:</h3>
                     <input
                         type="text"
@@ -325,22 +330,34 @@ function MainPage() {
                         onChange={(e) => setGuestName(e.target.value)}
                     />
                     <button onClick={handleGuestNameSubmit}>Submit</button>
-                </>
+                </div>
             )}
 
             {user && (
-                <>
-                    <button onClick={hostGame}>Host Game</button>
-                    <div style={{ marginTop: "20px" }}>
-                        <input
-                            type="text"
-                            placeholder="Enter Room ID"
-                            value={roomId}
-                            onChange={(e) => setRoomId(e.target.value)}
-                        />
-                        <button onClick={joinGame}>Join Game</button>
+                <div className="hostJoinGame">
+                    <div className="hostJoinButtons">
+                        <button style={{ marginRight: "50px" }} className="colorfulButtons" onClick={hostGame}>Host Game</button>
+                        <button
+                            onClick={() => setIsInputVisible(true)}
+                            disabled={isInputVisible}
+                            className="colorfulButtons"
+                        >
+                            Join Game
+                        </button>
                     </div>
-                </>
+                    {isInputVisible && (
+                        <div className="enterRoomContainer">
+                            <input
+                                type="text"
+                                placeholder="Enter room code..."
+                                value={roomId}
+                                onChange={(e) => setRoomId(e.target.value)}
+                                style={{ border:0 }}
+                            />
+                            <button onClick={joinGame} style={{ padding:0, border:0 }}><img width="35" height="35" src="https://img.icons8.com/ios-filled/50/search--v1.png" alt="search--v1"/></button>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );

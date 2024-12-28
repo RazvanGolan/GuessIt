@@ -1,0 +1,95 @@
+.bigContainer {
+    height: 100vw;
+    width: 100vw;
+    user-select: none;
+}
+
+.title {
+    font-family: 'Lobster Two', cursive;
+    font-size: 25px;
+}
+
+body, input {
+    font-family: 'Nunito', sans-serif;
+    background-color: #81BFDA;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    font-size: 17px;
+}
+
+.hostJoinGame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.hostJoinButtons {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+}
+
+.colorfulButtons {
+    background-color: #81BFDA;
+    border: 1px solid #FADA7A;
+    border-radius: 8px;
+    box-shadow: rgba(46, 47, 47, 0.5) 0 2px 5px 0;
+    box-sizing: border-box;
+    color: grey;
+    cursor: pointer;
+    padding: 0 12px 0 13px;
+    position: relative;
+    text-decoration: none;
+    touch-action: manipulation;
+    width: 130px;
+    font-size: 17px;
+    line-height: 30px;
+}
+
+.colorfulButtons:hover {
+    /*background-color: #f7fafa;*/
+}
+
+.colorfulButtons:focus {
+    border-color: #008296;
+    box-shadow: rgba(213, 217, 217, .5) 0 2px 5px 0;
+    outline: 0;
+}
+
+.enterRoomContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    margin-top: 30px;
+    height: 35px;
+}
+
+.enterRoomContainer input {
+    flex: 1; /* Makes the input take up all available space */
+    border: none;
+    outline: none;
+    font-size: 16px;
+    text-align: left;
+    padding: 10px;
+}
+
+.enterRoomContainer, .enterRoomContainer input {
+    border: 1px solid grey;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.enterRoomContainer button img {
+    width: 35px;
+    height: 35px;
+    background-color: #81BFDA;
+    border-left: 1px solid grey;
+    padding: 0;
+    cursor: pointer;
+}

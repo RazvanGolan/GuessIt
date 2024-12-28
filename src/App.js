@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import MainPage from "./MainPage";
+import MainPage from "./MainPage/MainPage";
 import GameRoom from "./GameRoom";
 
 function App() {
