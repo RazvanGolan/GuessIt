@@ -4,18 +4,95 @@
     user-select: none;
 }
 
+h1, h3 {
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
+
 .title {
     font-family: 'Lobster Two', cursive;
     font-size: 25px;
+    display: inline-block;
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.title::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #0087ca;
+    transform-origin: bottom center;
+    transition: transform 0.25s ease-out;
+}
+
+.title:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom center;
 }
 
 body, input {
     font-family: 'Nunito', sans-serif;
     background-color: #81BFDA;
-    margin: 0;
-    padding: 0;
     text-align: center;
     font-size: 17px;
+}
+
+.authentication {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.authentication input{
+    flex: 1;
+    outline: none;
+    font-size: 16px;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid grey;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1rem;
+}
+
+.formInputs {
+    display: flex;
+    flex-direction: column;
+}
+
+.authentication button {
+    background-color: #81BFDA;
+    border: 1px solid #FADA7A;
+    border-radius: 8px;
+    box-shadow: rgba(46, 47, 47, 0.5) 0 2px 5px 0;
+    box-sizing: border-box;
+    color: grey;
+    cursor: pointer;
+    padding: 0 8px 0 9px;
+    position: relative;
+    text-decoration: none;
+    touch-action: manipulation;
+    width: 80px;
+    font-size: 17px;
+    line-height: 30px;
+}
+
+.formButtons {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    justify-content: center;
 }
 
 .hostJoinGame {
@@ -71,7 +148,7 @@ body, input {
 }
 
 .enterRoomContainer input {
-    flex: 1; /* Makes the input take up all available space */
+    flex: 1;
     border: none;
     outline: none;
     font-size: 16px;
@@ -85,11 +162,11 @@ body, input {
     overflow: hidden;
 }
 
-.enterRoomContainer button img {
-    width: 35px;
-    height: 35px;
+.enterRoomContainer img {
+    width: 30px;
+    height: 30px;
     background-color: #81BFDA;
     border-left: 1px solid grey;
-    padding: 0;
+    padding: 3px;
     cursor: pointer;
 }
