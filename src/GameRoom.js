@@ -15,6 +15,9 @@ import ChatBox from "./ChatBox";
 import QRCodeComponent from "./QRCodeComponent";
 import GameSettings from "./GameSettings";
 import GameRound from "./GameRound";
+import {Card, CardContent} from "@mui/material";
+import Whiteboard from "./Whiteboard";
+
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -340,55 +343,134 @@ function GameRoom() {
     }
 
     return (
-        <div>
-            <h1>Room ID: {roomId}</h1>
-            <h2>Participants</h2>
-            <ul>
-                {participants.map((p) => (
-                    <li key={p.id}>
-                        {p.name}
-                        {p.isGuest ? " (Guest)" : ""}
-                        {p.isOwner ? " 👑 (Owner)" : ""}
-                        {isRoomOwner && !p.isOwner && (
-                            <button
-                                onClick={() => removeParticipant(p.id)}
-                                style={{ marginLeft: "10px" }}
-                            >
-                                Remove
-                            </button>
-                        )}
-                    </li>
-                ))}
-            </ul>
-            <div>
-                <button onClick={handleManualLeave}>Leave Room</button>
-                <button onClick={handleInviteLink}>{copyStatus}</button>
-                <QRCodeComponent />
+        <div style={styles.container}>
+            <header style={styles.header}>
+                <h1 style={styles.roomId}>Room ID: {roomId}</h1>
+            </header>
+
+            <div style={styles.main}>
+                {/* Left Column: Game Settings */}
+                <aside style={styles.leftColumn}>
+                    <GameSettings
+                        roomId={roomId}
+                        isRoomOwner={isRoomOwner}
+                        initialSettings={gameSettings}
+                    />
+                    <GameRound
+                        roomId={roomId}
+                        participants={participants}
+                        gameSettings={gameSettings}
+                        currentUser={currentUser}
+                        isRoomOwner={isRoomOwner}
+                        gameStatus={gameStatus}
+                        updateGameStatus={updateGameStatus}
+                    />
+                </aside>
+
+                {/* Center Column: Whiteboard */}
+                <section style={styles.centerColumn}>
+                    {gameStatus.wordSelectionTime === 0 && (
+                        <Whiteboard
+                            roomId={roomId}
+                            currentDrawer={gameStatus.currentDrawer}
+                            currentUser={currentUser}
+                            guessedPlayers={gameStatus.guessedPlayers}
+                            participants={participants}
+                        />
+                    )}
+                </section>
+
+                {/* Right Column: Chat */}
+                <aside style={styles.rightColumn}>
+                    {currentUser && (
+                        <ChatBox
+                            roomId={roomId}
+                            currentUser={currentUser}
+                            gameSettings={gameSettings}
+                            gameStatus={gameStatus}
+                        />
+                    )}
+                </aside>
             </div>
-            {currentUser && (
-                <ChatBox
-                    roomId={roomId}
-                    currentUser={currentUser}
-                    gameSettings={gameSettings}
-                    gameStatus={gameStatus}
-                />
-            )}
-            <GameSettings
-                roomId={roomId}
-                isRoomOwner={isRoomOwner}
-                initialSettings={gameSettings}
-            />
-            <GameRound
-                roomId={roomId}
-                participants={participants}
-                gameSettings={gameSettings}
-                currentUser={currentUser}
-                isRoomOwner={isRoomOwner}
-                gameStatus={gameStatus}
-                updateGameStatus={updateGameStatus}
-            />
+
+            {/* Footer: Controls */}
+            <footer style={styles.footer}>
+                <button style={styles.actionButton} onClick={handleManualLeave}>
+                    Leave Room
+                </button>
+                <button style={styles.actionButton} onClick={handleInviteLink}>
+                    {copyStatus}
+                </button>
+                <div style={styles.qrCodeContainer}>
+                    <QRCodeComponent />
+                </div>
+            </footer>
         </div>
     );
-}
+};
+
+const styles = {
+    container: {
+        backgroundColor: "#B1F0F7",
+        padding: "20px",
+        borderRadius: "8px",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        fontFamily: "Arial, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+        minHeight: "100vh",
+    },
+    header: {
+        textAlign: "center",
+    },
+    roomId: {
+        color: "#333",
+    },
+    main: {
+        display: "flex",
+        flex: 1,
+        gap: "20px",
+    },
+    leftColumn: {
+        flex: "1",
+        backgroundColor: "#F5F0CD",
+        padding: "15px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    },
+    centerColumn: {
+        flex: "2",
+        backgroundColor: "#FFFFFF",
+        padding: "15px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    },
+    rightColumn: {
+        flex: "1",
+        backgroundColor: "#F5F0CD",
+        padding: "15px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    },
+    footer: {
+        display: "flex",
+        justifyContent: "center",
+        gap: "10px",
+        marginTop: "20px",
+    },
+    actionButton: {
+        backgroundColor: "#FADA7A",
+        border: "none",
+        borderRadius: "8px",
+        padding: "10px 15px",
+        cursor: "pointer",
+        fontWeight: "bold",
+        color: "#333",
+    },
+    qrCodeContainer: {
+        marginLeft: "10px",
+    },
+};
 
 export default GameRoom;

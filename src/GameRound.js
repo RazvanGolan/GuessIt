@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {doc, collection, addDoc, getDoc} from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
 const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwner, gameStatus, updateGameStatus }) => {
     const isProcessing = useRef(false);
@@ -158,6 +159,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 wordSelectionTime: 0,
                 timeRemaining: gameSettings.drawTime,
                 revealedHints: [],
+                drawingData: [],
                 nextHintTime: hintTimes[0] || null,
                 guessedPlayers: [] // Reset guessed players when new word is selected
             };
@@ -348,84 +350,245 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
     };
 
     // Rest of the JSX remains the same as in your original component
-    return (
-        <div className="game-round-status">
-            {gameStatus.isGameActive && (
-                <div>
-                    <h2>Round {gameStatus.currentRound} of {gameSettings.rounds}</h2>
-                    <p>Current Drawer: {participants.find(p => p.id === gameStatus.currentDrawer)?.name}</p>
+    const styles = {
+        container: {
+            backgroundColor: "#F5F0CD",
+            padding: "25px",
+            borderRadius: "12px",
+            boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)",
+            fontFamily: "Arial, sans-serif",
+            maxWidth: "800px",
+            margin: "0 auto",
+        },
+        title: {
+            fontSize: "2rem",
+            fontWeight: "bold",
+            marginBottom: "20px",
+            color: "#2C3E50",
+            textAlign: "center",
+        },
+        section: {
+            backgroundColor: "rgba(255, 255, 255, 0.7)",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px",
+            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.05)",
+            transition: "transform 0.2s",
+        },
+        button: {
+            backgroundColor: "#FADA7A",
+            border: "none",
+            borderRadius: "8px",
+            padding: "12px 20px",
+            cursor: "pointer",
+            fontWeight: "bold",
+            color: "#333",
+            marginRight: "10px",
+            marginBottom: "10px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            ":hover": {
+                transform: "translateY(-2px)",
+                boxShadow: "0 4px 8px rgba(0, 0, 0, 0.15)",
+            }
+        },
+        listItem: {
+            listStyleType: "none",
+            marginBottom: "10px",
+            padding: "8px",
+            borderRadius: "6px",
+            backgroundColor: "rgba(255, 255, 255, 0.5)",
+        },
+        listContainer: {
+            padding: "0",
+            margin: "0",
+        },
+        lineThrough: {
+            textDecoration: "line-through",
+            opacity: "0.7",
+        },
+        bold: {
+            fontWeight: "bold",
+            color: "#2C3E50",
+        },
+        timeDisplay: {
+            fontSize: "1.2rem",
+            fontWeight: "bold",
+            color: "#E67E22",
+            textAlign: "center",
+            marginTop: "10px",
+        },
+        wordDisplay: {
+            textAlign: "center",
+            fontSize: "1.5rem",
+            margin: "15px 0",
+            padding: "15px",
+            backgroundColor: "white",
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+        },
+        scoreboardTitle: {
+            textAlign: "center",
+            color: "#2C3E50",
+            marginBottom: "15px",
+        },
+        scoreItem: {
+            display: "flex",
+            justifyContent: "space-between",
+            padding: "0px 25px",
+            backgroundColor: "rgba(255, 255, 255, 0.4)",
+            borderRadius: "6px",
+            transition: "all 0.5s ease",
+        },
+        scoreValue: {
+            transition: "transform 0.3s ease",
+        },
+        scoreAnimated: {
+            transform: "scale(1.2)",
+            backgroundColor: "#FADA7A",
+        }
 
-                    {currentUser?.id === gameStatus.currentDrawer && gameStatus.wordSelectionTime > 0 && (
-                        <div>
-                            <h3>Choose a word to draw! ({gameStatus.wordSelectionTime} seconds left)</h3>
-                            <div>
-                                {gameStatus.availableWords.map((word, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => selectWord(word)}
-                                    >
-                                        {word}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
+    };
 
-                    {gameStatus.wordSelectionTime === 0 && (
-                        <div>
-                            {currentUser?.id === gameStatus.currentDrawer ? (
-                                <h3>You are drawing: {gameStatus.selectedWord}</h3>
-                            ) : (
-                                <div>
-                                    <h3>Word to guess: {getMaskedWord(gameStatus.selectedWord, gameStatus.revealedHints)}</h3>
-                                    <p>Hints remaining: {Math.max(0, (gameSettings.hints || 0) - (gameStatus.revealedHints?.length || 0))}</p>
+        return (
+            <div style={styles.container}>
+                {gameStatus.isGameActive && (
+                    <div>
+                        <h2 style={styles.title}>
+                            Round {gameStatus.currentRound} of {gameSettings.rounds}
+                        </h2>
+                        <p>
+                            Current Drawer:{" "}
+                            {participants.find((p) => p.id === gameStatus.currentDrawer)?.name}
+                        </p>
+
+                        {currentUser?.id === gameStatus.currentDrawer &&
+                            gameStatus.wordSelectionTime > 0 && (
+                                <div style={styles.section}>
+                                    <h3>
+                                        Choose a word to draw! ({gameStatus.wordSelectionTime} seconds
+                                        left)
+                                    </h3>
+                                    <div>
+                                        {gameStatus.availableWords.map((word, index) => (
+                                            <button
+                                                key={index}
+                                                style={styles.button}
+                                                onClick={() => selectWord(word)}
+                                            >
+                                                {word}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
-                            <p>Time Remaining: {gameStatus.timeRemaining} seconds</p>
+
+                        {gameStatus.wordSelectionTime === 0 && (
+                            <div style={styles.section}>
+                                {currentUser?.id === gameStatus.currentDrawer ? (
+                                    <h3>You are drawing: {gameStatus.selectedWord}</h3>
+                                ) : (
+                                    <div>
+                                        <h3>
+                                            Word to guess:{" "}
+                                            {getMaskedWord(
+                                                gameStatus.selectedWord,
+                                                gameStatus.revealedHints
+                                            )}
+                                        </h3>
+                                        <p>
+                                            Hints remaining:{" "}
+                                            {Math.max(
+                                                0,
+                                                (gameSettings.hints || 0) -
+                                                (gameStatus.revealedHints?.length || 0)
+                                            )}
+                                        </p>
+                                    </div>
+                                )}
+                                <p>Time Remaining: {gameStatus.timeRemaining} seconds</p>
+                            </div>
+                        )}
+
+                        <div style={styles.section}>
+                            <h4>Drawing Order:</h4>
+                            <ul>
+                                {participants.map((p) => (
+                                    <li
+                                        key={p.id}
+                                        style={{
+                                            ...styles.listItem,
+                                            ...(gameStatus.completedDrawers.includes(p.id)
+                                                ? styles.lineThrough
+                                                : {}),
+                                            ...(p.id === gameStatus.currentDrawer ? styles.bold : {}),
+                                        }}
+                                    >
+                                        {p.name}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                    )}
+                        <div style={styles.section}>
+                            <h3 style={styles.scoreboardTitle}>Scoreboard</h3>
+                            <TransitionGroup component="ul" style={styles.listContainer}>
+                                {[...participants]
+                                    .sort((a, b) => (gameStatus.playerScores[b.id] || 0) - (gameStatus.playerScores[a.id] || 0))
+                                    .map((p, index) => (
+                                        <CSSTransition
+                                            key={p.id}
+                                            timeout={500}
+                                            classNames="score-item"
+                                        >
+                                            <li
+                                                style={{
+                                                    ...styles.scoreItem,
+                                                    transform: `translateY(${index * 100}%)`
+                                                }}
+                                            >
+                                                <span>{p.name}</span>
+                                                <span>{gameStatus.playerScores[p.id] || 0} points</span>
+                                            </li>
+                                        </CSSTransition>
+                                    ))}
+                            </TransitionGroup>
+                        </div>
 
-                    <div>
-                        <h4>Drawing Order:</h4>
-                        <ul>
-                            {participants.map(p => (
-                                <li
-                                    key={p.id}
-                                    style={{
-                                        textDecoration: gameStatus.completedDrawers.includes(p.id)
-                                            ? 'line-through'
-                                            : 'none',
-                                        fontWeight: p.id === gameStatus.currentDrawer
-                                            ? 'bold'
-                                            : 'normal'
-                                    }}
-                                >
-                                    {p.name}
-                                </li>
-                            ))}
-                        </ul>
+                        <style jsx>{`
+                            .score-item-enter {
+                                opacity: 0;
+                                transform: translateY(-20px);
+                            }
+
+                            .score-item-enter-active {
+                                opacity: 1;
+                                transform: translateY(0);
+                                transition: all 500ms ease;
+                            }
+
+                            .score-item-exit {
+                                opacity: 1;
+                            }
+
+                            .score-item-exit-active {
+                                opacity: 0;
+                                transform: translateY(20px);
+                                transition: all 500ms ease;
+                            }
+                        `}</style>
+
+
                     </div>
+                )}
 
-                    <div className="scoreboard">
-                        <h3>Scoreboard</h3>
-                        <ul>
-                            {participants.map(p => (
-                                <li key={p.id}>
-                                    {p.name}: {gameStatus.playerScores[p.id] || 0} points
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
+                {isRoomOwner && !gameStatus.isGameActive && (
+                    <button style={styles.button} onClick={startGame}>
+                        Start Game
+                    </button>
+                )}
 
-            {isRoomOwner && !gameStatus.isGameActive && (
-                <button onClick={startGame}>
-                    Start Game
-                </button>
-            )}
-        </div>
-    );
+            </div>
+        );
 };
 
 export default GameRound;
