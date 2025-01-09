@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { db } from "./firebaseConfig";
+import { db } from "../firebaseConfig";
 import { setDoc, getDoc, doc, updateDoc } from "firebase/firestore";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, setPersistence, updateProfile, browserLocalPersistence} from "firebase/auth";
+import './MainPage.css';
 
 const auth = getAuth();
 
@@ -14,7 +15,9 @@ function MainPage() {
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
     const [guestName, setGuestName] = useState(""); // Track guest name
-    const [isNameInputVisible, setIsNameInputVisible] = useState(false); // Show guest name input
+    const [isNameInputVisible, setIsNameInputVisible] = useState(false);
+    const [isGuestNameInputVisible, setIsGuestNameInputVisible] = useState(false);
+    const [isInputVisible, setIsInputVisible] = useState(false);
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -65,13 +68,38 @@ function MainPage() {
             console.log("User logged in:", userData);
         } catch (error) {
             console.error("Error with authentication:", error);
+
+            // Map Firebase error codes to user-friendly messages
+            let errorMessage;
+            switch (error.code) {
+                case "auth/email-already-in-use":
+                    errorMessage = "The email address is already in use by another account.";
+                    break;
+                case "auth/invalid-email":
+                    errorMessage = "The email address is not valid.";
+                    break;
+                case "auth/weak-password":
+                    errorMessage = "Password should be at least 6 characters.";
+                    break;
+                case "auth/user-not-found":
+                    errorMessage = "No user found with this email.";
+                    break;
+                case "auth/invalid-credential":
+                    errorMessage = "The credentials provided are invalid. Please check your email and password.";
+                    break;
+                default:
+                    errorMessage = "An unexpected error occurred. Please try again.";
+            }
+
+            // Show an alert to the user
+            alert(errorMessage);
         }
     };
 
 
     // Function to log in as a guest
     const handleGuest = () => {
-        setIsNameInputVisible(true);
+        setIsGuestNameInputVisible(true);
     };
 
     // Save guest data after name input
@@ -92,7 +120,7 @@ function MainPage() {
                 const existingUserData = userSnap.data();
                 setUser(existingUserData);
                 setIsGuest(true);
-                setIsNameInputVisible(false);
+                setIsGuestNameInputVisible(false);
                 localStorage.setItem("guestUser", JSON.stringify(existingUserData));
 
                 // If there's a room ID, attempt to join the room
@@ -103,7 +131,7 @@ function MainPage() {
                 await setDoc(userRef, guestData);
                 setUser(guestData);
                 setIsGuest(true);
-                setIsNameInputVisible(false);
+                setIsGuestNameInputVisible(false);
                 localStorage.setItem("guestUser", JSON.stringify(guestData));
 
                 // If there's a room ID, attempt to join the room
@@ -299,48 +327,92 @@ function MainPage() {
     };
 
     return (
-        <div style={{ textAlign: "center", marginTop: "50px" }}>
-            <h1>Welcome to Guess It!</h1>
+        <div className="bigContainer">
+            <div className="title">
+                <h1 unselectable="on">Guess It</h1>
+            </div>
+            <p unselectable="on">A free online multiplayer drawing and guessing game</p>
 
-            {!user && (
-                <>
+            <div className="authentication">
+                {!user && (
                     <div>
-                        <input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-                        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                        <button onClick={() => handleAuth(false)}>Login</button>
-                        <button onClick={() => handleAuth(true)}>Sign Up</button>
+                        <div className="singInUpContainer">
+                            <div className="formInputs">
+                                {isNameInputVisible && (
+                                    <input
+                                        type="text"
+                                        placeholder="Name"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                    />
+                                )}
+                                <input
+                                    type="email"
+                                    placeholder="Email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                                <input
+                                    type="password"
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                            <div className="formButtons">
+                                <button onClick={() => handleAuth(false)}>Login</button>
+                                <button onClick={() => { !isNameInputVisible ? setIsNameInputVisible(true) : handleAuth(true)}}>Sign Up</button>
+                            </div>
+                        </div>
+                        <button className="guest-btn" onClick={handleGuest} style={{width:160, margin: 20}}>
+                            Continue as Guest
+                        </button>
                     </div>
-                    <button onClick={handleGuest}>Continue as Guest</button>
-                </>
-            )}
+                )}
 
-            {isNameInputVisible && !user && (
-                <>
-                    <h3>Please enter a name for the guest:</h3>
-                    <input
-                        type="text"
-                        placeholder="Guest Name"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                    />
-                    <button onClick={handleGuestNameSubmit}>Submit</button>
-                </>
-            )}
+                {isGuestNameInputVisible && !user && (
+                    <div className="guestAuthentication">
+                        <h3>Please enter a name:</h3>
+                        <div>
+                            <input
+                                type="text"
+                                placeholder="Guest Name"
+                                value={guestName}
+                                onChange={(e) => setGuestName(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <button onClick={handleGuestNameSubmit}>Submit</button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {user && (
-                <>
-                    <button onClick={hostGame}>Host Game</button>
-                    <div style={{ marginTop: "20px" }}>
-                        <input
-                            type="text"
-                            placeholder="Enter Room ID"
-                            value={roomId}
-                            onChange={(e) => setRoomId(e.target.value)}
-                        />
-                        <button onClick={joinGame}>Join Game</button>
+                <div className="hostJoinGame">
+                    <div className="hostJoinButtons">
+                    <button style={{ marginRight: "50px" }} className="colorfulButtons" onClick={hostGame}>Host Game</button>
+                        <button
+                            onClick={() => setIsInputVisible(true)}
+                            disabled={isInputVisible}
+                            className="colorfulButtons"
+                        >
+                            Join Game
+                        </button>
                     </div>
-                </>
+                    {isInputVisible && (
+                        <div className="enterRoomContainer">
+                            <input
+                                type="text"
+                                placeholder="Enter room code..."
+                                value={roomId}
+                                onChange={(e) => setRoomId(e.target.value)}
+                                style={{ border:0 }}
+                            />
+                            <button onClick={joinGame} style={{ padding:0, border:0 }}><img width="35" height="35" src="https://img.icons8.com/ios-filled/50/search--v1.png" alt="search--v1"/></button>
+                        </div>
+                    )}
+                </div>
             )}
         </div>
     );
