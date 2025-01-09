@@ -1,0 +1,40 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users to read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow guests to create and read their own data with a random guest ID
+    match /users/{guestId} {
+      allow create: if true;  // Allow anyone (including guests) to create their own document
+      allow read: if true;    // Allow guests to read their own data
+    }
+
+    // Allow access to rooms
+    match /rooms/{roomId} {
+      // Allow both authenticated users and guests to read/write rooms
+      allow create: if request.auth != null || request.resource.data.roomId != null;
+      allow read, write: if true;
+
+      // Allow messages subcollection with flexible permissions
+      match /messages/{messageId} {
+        allow read: if true;
+        
+        allow create: if 
+          request.resource.data.sender.id != null && 
+          request.resource.data.text is string && 
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.timestamp is timestamp;
+      }
+    }
+
+    // Allow read access to the words document for querying words
+    match /words/{docId} {
+      allow read: if true; // Allow anyone to read the words document
+      allow write: if request.auth != null; // Only authenticated users can write
+    }
+  }
+}
