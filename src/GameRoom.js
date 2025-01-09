@@ -17,7 +17,7 @@ import GameSettings from "./GameSettings";
 import GameRound from "./GameRound";
 import {Card, CardContent} from "@mui/material";
 import Whiteboard from "./Whiteboard";
-
+import "./GameRoom.css";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -343,14 +343,17 @@ function GameRoom() {
     }
 
     return (
-        <div style={styles.container}>
-            <header style={styles.header}>
-                <h1 style={styles.roomId}>Room ID: {roomId}</h1>
-            </header>
+        <div className="container">
+            <div className="title">
+                <h1 unselectable="on">Guess It</h1>
+            </div>
 
-            <div style={styles.main}>
-                {/* Left Column: Game Settings */}
-                <aside style={styles.leftColumn}>
+            <div className="roomId">
+                <h3>Room ID: {roomId}</h3>
+            </div>
+
+            <div className="main">
+                <aside className="left-column">
                     <GameSettings
                         roomId={roomId}
                         isRoomOwner={isRoomOwner}
@@ -367,8 +370,7 @@ function GameRoom() {
                     />
                 </aside>
 
-                {/* Center Column: Whiteboard */}
-                <section style={styles.centerColumn}>
+                <section className="center-column">
                     {gameStatus.wordSelectionTime === 0 && (
                         <Whiteboard
                             roomId={roomId}
@@ -380,8 +382,7 @@ function GameRoom() {
                     )}
                 </section>
 
-                {/* Right Column: Chat */}
-                <aside style={styles.rightColumn}>
+                <aside className="right-column">
                     {currentUser && (
                         <ChatBox
                             roomId={roomId}
@@ -393,84 +394,18 @@ function GameRoom() {
                 </aside>
             </div>
 
-            {/* Footer: Controls */}
-            <footer style={styles.footer}>
-                <button style={styles.actionButton} onClick={handleManualLeave}>
+            <footer className="footer">
+                <button className="action-button" onClick={handleManualLeave}>
                     Leave Room
                 </button>
-                <button style={styles.actionButton} onClick={handleInviteLink}>
+                <button className="action-button" onClick={handleInviteLink}>
                     {copyStatus}
                 </button>
-                <div style={styles.qrCodeContainer}>
-                    <QRCodeComponent />
+                <div className="qr-code-container">
+                    <QRCodeComponent/>
                 </div>
             </footer>
         </div>
     );
 };
-
-const styles = {
-    container: {
-        backgroundColor: "#B1F0F7",
-        padding: "20px",
-        borderRadius: "8px",
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        fontFamily: "Arial, sans-serif",
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-        minHeight: "100vh",
-    },
-    header: {
-        textAlign: "center",
-    },
-    roomId: {
-        color: "#333",
-    },
-    main: {
-        display: "flex",
-        flex: 1,
-        gap: "20px",
-    },
-    leftColumn: {
-        flex: "1",
-        backgroundColor: "#F5F0CD",
-        padding: "15px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-    },
-    centerColumn: {
-        flex: "2",
-        backgroundColor: "#FFFFFF",
-        padding: "15px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-    },
-    rightColumn: {
-        flex: "1",
-        backgroundColor: "#F5F0CD",
-        padding: "15px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-    },
-    footer: {
-        display: "flex",
-        justifyContent: "center",
-        gap: "10px",
-        marginTop: "20px",
-    },
-    actionButton: {
-        backgroundColor: "#FADA7A",
-        border: "none",
-        borderRadius: "8px",
-        padding: "10px 15px",
-        cursor: "pointer",
-        fontWeight: "bold",
-        color: "#333",
-    },
-    qrCodeContainer: {
-        marginLeft: "10px",
-    },
-};
-
 export default GameRoom;

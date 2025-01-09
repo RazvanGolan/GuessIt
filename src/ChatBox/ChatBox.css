@@ -33,9 +33,10 @@
 .message-input {
     flex-grow: 1;
     margin-right: 10px;
-    padding: 8px;
+    padding: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
+    text-align: left;
 }
 
 .send-button {

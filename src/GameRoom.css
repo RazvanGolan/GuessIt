@@ -1,0 +1,104 @@
+/* Container */
+.container {
+    background-color: #B1F0F7;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 100vh;
+}
+
+.title {
+    font-family: 'Lobster Two', cursive;
+    font-size: 25px;
+    display: inline-block;
+    position: relative;
+    margin-bottom: 15px;
+    align-self: center; /* Center the title inside the flex container */
+    width: fit-content; /* Ensure the title's width matches its content */
+}
+
+.title::after {
+    content: '';
+    position: absolute;
+    width: 100%; /* Match the width of the title's text */
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #0087ca;
+    transform-origin: bottom center;
+    transition: transform 0.25s ease-out;
+}
+
+.title:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom center;
+}
+
+/* Room ID */
+.roomId {
+    color: #333;
+    text-align: center;
+}
+
+/* Main Layout */
+.main {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+}
+
+/* Left Column */
+.left-column {
+    flex: 1;
+    background-color: #F5F0CD;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Center Column */
+.center-column {
+    flex: 2;
+    background-color: #FFFFFF;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Right Column */
+.right-column {
+    flex: 1;
+    background-color: #F5F0CD;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Footer */
+.footer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Action Button */
+.action-button {
+    background-color: #FADA7A;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #333;
+}
+
+/* QR Code Container */
+.qr-code-container {
+    margin-left: 10px;
+}
