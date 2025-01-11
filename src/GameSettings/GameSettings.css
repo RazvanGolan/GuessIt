@@ -1,0 +1,98 @@
+.game-settings {
+    padding: 15px;
+    border-left: 4px solid #3498db;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 500px;
+    margin: 15px auto;
+}
+
+.game-settings h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e9ecef;
+    font-size: 1.2rem;
+}
+
+.game-settings > div {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    background-color: white;
+    border-radius: 4px;
+}
+
+.game-settings label {
+    width: 150px;
+    color: #34495e;
+    font-weight: 500;
+    margin-right: 10px;
+    font-size: 0.9rem;
+}
+
+.game-settings select {
+    padding: 4px 8px;
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    background-color: white;
+    color: #2c3e50;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100px;
+}
+
+.game-settings select:hover {
+    border-color: #3498db;
+}
+
+.game-settings select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.game-settings span {
+    padding: 4px 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    color: #2c3e50;
+    min-width: 100px;
+    display: inline-block;
+    font-size: 0.9rem;
+}
+
+.game-settings textarea {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid #e9ecef;
+    border-radius: 4px;
+    min-height: 80px;
+    font-size: 0.9rem;
+    color: #2c3e50;
+    resize: vertical;
+}
+
+.game-settings textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.game-settings textarea:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.game-settings p {
+    margin: 0;
+    padding: 8px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    color: #7f8c8d;
+    font-style: italic;
+    font-size: 0.9rem;
+}

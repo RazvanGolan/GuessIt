@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { db } from './firebaseConfig';
+import { db } from '../firebaseConfig';
 
 const Whiteboard = ({
                         roomId = '',

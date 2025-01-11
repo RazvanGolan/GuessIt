@@ -13,9 +13,9 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebaseConfig";
 import ChatBox from "../ChatBox/ChatBox";
 import QRCodeComponent from "../QRComponent/QRCodeComponent";
-import GameSettings from "../GameSettings";
+import GameSettings from "../GameSettings/GameSettings";
 import GameRound from "../GameRound/GameRound";
-import Whiteboard from "../Whiteboard";
+import Whiteboard from "../Whiteboard/Whiteboard";
 import "./GameRoom.css";
 
 function GameRoom() {
@@ -44,6 +44,9 @@ function GameRoom() {
         guessedPlayers: [], // New
         playerScores: participants.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {}) // New
     });
+
+    const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+
 
     // Function to join the room
     const joinRoom = useCallback(async (user) => {
@@ -353,11 +356,13 @@ function GameRoom() {
 
             <div className="main">
                 <aside className="left-column">
-                    <GameSettings
-                        roomId={roomId}
-                        isRoomOwner={isRoomOwner}
-                        initialSettings={gameSettings}
-                    />
+                    {!gameStatus.isGameActive && (
+                        <GameSettings
+                            roomId={roomId}
+                            isRoomOwner={isRoomOwner}
+                            initialSettings={gameSettings}
+                        />
+                    )}
                     <GameRound
                         roomId={roomId}
                         participants={participants}
