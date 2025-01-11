@@ -202,7 +202,6 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             if (!gameStatus.isGameActive || isProcessing.current) return;
 
             let needsWordSelection = false;
-            let wordToSelect = null;
 
             await updateGameStatus(prev => {
                 if (!prev.isGameActive) return prev;
@@ -217,7 +216,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     );
 
                     if (needsWordSelection) {
-                        wordToSelect = prev.availableWords[0];
+                        selectWord(gameStatus.availableWords.length > 0 ? gameStatus.availableWords[0] : "error");
                     }
 
                     return {
@@ -262,10 +261,6 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
                 return prev;
             });
-
-            if (needsWordSelection && wordToSelect) {
-                await selectWord(wordToSelect);
-            }
         };
 
         if (gameStatus.isGameActive) {
@@ -275,15 +270,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         return () => {
             if (timer) clearInterval(timer);
         };
-    }, [
-        gameStatus.isGameActive,
-        currentUser?.id,
-        selectWord,
-        advanceGame,
-        updateGameStatus,
-        gameSettings.drawTime,
-        gameSettings.hints
-    ]);
+    }, [gameStatus.isGameActive, currentUser.id, advanceGame, updateGameStatus, gameSettings.drawTime, gameSettings.hints, gameStatus.availableWords, selectWord]);
 
     const startGame = async () => {
         if (!isRoomOwner) return;
