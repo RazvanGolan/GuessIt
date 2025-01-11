@@ -10,13 +10,12 @@ import {
     addDoc
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { db } from "./firebaseConfig";
-import ChatBox from "./ChatBox/ChatBox";
-import QRCodeComponent from "./QRCodeComponent";
-import GameSettings from "./GameSettings";
-import GameRound from "./GameRound";
-import {Card, CardContent} from "@mui/material";
-import Whiteboard from "./Whiteboard";
+import { db } from "../firebaseConfig";
+import ChatBox from "../ChatBox/ChatBox";
+import QRCodeComponent from "../QRComponent/QRCodeComponent";
+import GameSettings from "../GameSettings";
+import GameRound from "../GameRound/GameRound";
+import Whiteboard from "../Whiteboard";
 import "./GameRoom.css";
 
 function GameRoom() {
@@ -367,6 +366,7 @@ function GameRoom() {
                         isRoomOwner={isRoomOwner}
                         gameStatus={gameStatus}
                         updateGameStatus={updateGameStatus}
+                        removeParticipant={removeParticipant}
                     />
                 </aside>
 

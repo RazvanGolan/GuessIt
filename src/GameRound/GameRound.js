@@ -1,9 +1,9 @@
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {doc, collection, addDoc, getDoc} from "firebase/firestore";
-import { db } from "./firebaseConfig";
+import { db } from "../firebaseConfig";
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
-const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwner, gameStatus, updateGameStatus }) => {
+const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwner, gameStatus, updateGameStatus, removeParticipant }) => {
     const isProcessing = useRef(false);
     const [words, setWords] = useState(null);
     const messageDebounceRef = useRef(null);
@@ -398,6 +398,8 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             padding: "8px",
             borderRadius: "6px",
             backgroundColor: "rgba(255, 255, 255, 0.5)",
+            justifyContent: "space-between",
+            alignItems: "center",
         },
         listContainer: {
             padding: "0",
@@ -452,6 +454,48 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
         return (
             <div style={styles.container}>
+
+                {!gameStatus.isGameActive && (
+                    <div style={styles.section}>
+                        <h3>Participants</h3>
+                        <ul style={styles.listContainer}>
+                            {participants.map((p) => (
+                                <li key={p.id} style={{
+                                    ...styles.listItem,
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                }}>
+                                    <span style={{flex: 1, textAlign: "center"}}>
+                                        {p.name} {p.isOwner ? "👑" : ""}
+                                    </span>
+                                    
+                                    {isRoomOwner && !p.isOwner && (
+                                        <button
+                                            onClick={() => removeParticipant(p.id)}
+                                            style={{
+                                                backgroundColor: '#ff6b6b',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '4px',
+                                                padding: '4px 8px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.8rem',
+                                                transition: 'background-color 0.2s',
+                                                ':hover': {
+                                                    backgroundColor: '#ff5252'
+                                                }
+                                            }}
+                                        >
+                                            Remove
+                                        </button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {gameStatus.isGameActive && (
                     <div>
                         <h2 style={styles.title}>
