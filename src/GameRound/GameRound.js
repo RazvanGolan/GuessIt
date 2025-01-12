@@ -458,7 +458,60 @@ const GameRound = ({
                 "transform": "translateY(1px)", // Press effect
                 "boxShadow": "rgba(46, 47, 47, 0.2) 0 2px 4px 0, inset 0 1px 1px rgba(255,255,255,0.2)"
             }
-        }
+
+        },
+            participantSection: {
+                backgroundColor: "rgba(255, 255, 255, 0.7)",
+                padding: "20px",
+                borderRadius: "12px",
+                marginBottom: "20px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                transition: "all 0.3s ease",
+            },
+
+            participantList: {
+                padding: "0",
+                margin: "15px 0",
+                listStyle: "none",
+            },
+
+            participantItem: {
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                backgroundColor: "rgba(255, 255, 255, 0.8)",
+                padding: "12px 20px",
+                marginBottom: "12px",
+                borderRadius: "10px",
+                border: "1px solid rgba(129, 191, 218, 0.3)", // Subtle border using your button color
+                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.05)",
+                transition: "all 0.2s ease",
+            },
+
+            participantName: {
+                flex: 1,
+                textAlign: "center",
+                fontSize: "16px",
+                fontWeight: "500",
+                color: "rgba(46, 47, 47, 0.8)", // Matching your button text color
+            },
+
+            ownerCrown: {
+                marginLeft: "8px",
+                fontSize: "18px",
+                filter: "drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1))",
+            },
+
+            sectionTitle: {
+                fontWeight: "600",
+                color: "#2C3E50",
+                textAlign: "center",
+                marginBottom: "20px",
+                position: "relative",
+                paddingBottom: "10px",
+            },
+
+
 
 
     };
@@ -467,23 +520,26 @@ const GameRound = ({
             <div style={styles.container}>
 
                 {!gameStatus.isGameActive && (
-                    <div style={styles.section}>
-                        <h3>Participants</h3>
-                        <ul style={styles.listContainer}>
+                    <div style={styles.participantSection}>
+                        <h3 style={styles.sectionTitle}>
+                            Participants
+                            <div style={styles.sectionTitleUnderline}></div>
+                        </h3>
+
+                        <ul style={styles.participantList}>
                             {participants.map((p) => (
-                                <li key={p.id} style={{
-                                    ...styles.listItem,
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    <span style={{flex: 1, textAlign: "center"}}>
-                                        {p.name} {p.isOwner ? "👑" : ""}
-                                    </span>
-                                    
+                                <li key={p.id} style={styles.participantItem}>
+                        <span style={styles.participantName}>
+                            {p.name}
+                            {p.isOwner && (
+                                <span style={styles.ownerCrown}>👑</span>
+                            )}
+                        </span>
+
                                     {isRoomOwner && !p.isOwner && (
                                         <button
-                                            onClick={() => removeParticipant(p.id)} className="colorfulButtons" >
+                                            onClick={() => removeParticipant(p.id)}
+                                            className="colorfulButtons">
                                             Remove
                                         </button>
                                     )}
@@ -492,7 +548,6 @@ const GameRound = ({
                         </ul>
                     </div>
                 )}
-
                 {gameStatus.isGameActive && (
                     <div>
                         <h2 style={styles.title}>
