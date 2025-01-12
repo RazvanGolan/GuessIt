@@ -10,11 +10,13 @@ import {
     addDoc
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { db } from "./firebaseConfig";
-import ChatBox from "./ChatBox/ChatBox";
-import QRCodeComponent from "./QRCodeComponent";
-import GameSettings from "./GameSettings";
-import GameRound from "./GameRound";
+import { db } from "../firebaseConfig";
+import ChatBox from "../ChatBox/ChatBox";
+import QRCodeComponent from "../QRComponent/QRCodeComponent";
+import GameSettings from "../GameSettings/GameSettings";
+import GameRound from "../GameRound/GameRound";
+import Whiteboard from "../Whiteboard/Whiteboard";
+import "./GameRoom.css";
 
 function GameRoom() {
     const { roomId } = useParams();
@@ -42,6 +44,9 @@ function GameRoom() {
         guessedPlayers: [], // New
         playerScores: participants.reduce((acc, p) => ({ ...acc, [p.id]: 0 }), {}) // New
     });
+
+    const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+
 
     // Function to join the room
     const joinRoom = useCallback(async (user) => {
@@ -340,55 +345,72 @@ function GameRoom() {
     }
 
     return (
-        <div>
-            <h1>Room ID: {roomId}</h1>
-            <h2>Participants</h2>
-            <ul>
-                {participants.map((p) => (
-                    <li key={p.id}>
-                        {p.name}
-                        {p.isGuest ? " (Guest)" : ""}
-                        {p.isOwner ? " 👑 (Owner)" : ""}
-                        {isRoomOwner && !p.isOwner && (
-                            <button
-                                onClick={() => removeParticipant(p.id)}
-                                style={{ marginLeft: "10px" }}
-                            >
-                                Remove
-                            </button>
-                        )}
-                    </li>
-                ))}
-            </ul>
-            <div>
-                <button onClick={handleManualLeave}>Leave Room</button>
-                <button onClick={handleInviteLink}>{copyStatus}</button>
-                <QRCodeComponent />
+        <div className="container">
+            <div className="title">
+                <h1 unselectable="on">Guess It</h1>
             </div>
-            {currentUser && (
-                <ChatBox
-                    roomId={roomId}
-                    currentUser={currentUser}
-                    gameSettings={gameSettings}
-                    gameStatus={gameStatus}
-                />
-            )}
-            <GameSettings
-                roomId={roomId}
-                isRoomOwner={isRoomOwner}
-                initialSettings={gameSettings}
-            />
-            <GameRound
-                roomId={roomId}
-                participants={participants}
-                gameSettings={gameSettings}
-                currentUser={currentUser}
-                isRoomOwner={isRoomOwner}
-                gameStatus={gameStatus}
-                updateGameStatus={updateGameStatus}
-            />
+
+            <div className="roomId">
+                <h3>Room ID: {roomId}</h3>
+            </div>
+
+            <div className="main">
+                <aside className="left-column">
+                    {!gameStatus.isGameActive && (
+                        <GameSettings
+                            roomId={roomId}
+                            isRoomOwner={isRoomOwner}
+                            initialSettings={gameSettings}
+                        />
+                    )}
+                    <GameRound
+                        roomId={roomId}
+                        participants={participants}
+                        gameSettings={gameSettings}
+                        currentUser={currentUser}
+                        isRoomOwner={isRoomOwner}
+                        gameStatus={gameStatus}
+                        updateGameStatus={updateGameStatus}
+                        removeParticipant={removeParticipant}
+                    />
+                </aside>
+
+                <section className="center-column">
+                    {gameStatus.wordSelectionTime === 0 && (
+                        <Whiteboard
+                            roomId={roomId}
+                            currentDrawer={gameStatus.currentDrawer}
+                            currentUser={currentUser}
+                            guessedPlayers={gameStatus.guessedPlayers}
+                            participants={participants}
+                        />
+                    )}
+                </section>
+
+                <aside className="right-column">
+                    {currentUser && (
+                        <ChatBox
+                            roomId={roomId}
+                            currentUser={currentUser}
+                            gameSettings={gameSettings}
+                            gameStatus={gameStatus}
+                        />
+                    )}
+                </aside>
+            </div>
+
+            <footer className="footer">
+                <button className="colorfulButtons" onClick={handleManualLeave}>
+                    Leave Room
+                </button>
+                <button className="colorfulButtons" onClick={handleInviteLink}>
+                    {copyStatus}
+                </button>
+                <div className="qr-code-container">
+                    <QRCodeComponent/>
+                </div>
+            </footer>
         </div>
     );
-}
-
+};
 export default GameRoom;

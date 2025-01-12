@@ -53,3 +53,24 @@
 .qr-code-btn:hover {
     background-color: #0056b3;
 }
+
+.colorfulButtons {
+    background-color: #81BFDA;
+    border: 1px solid #FADA7A;
+    border-radius: 8px;
+    box-shadow: rgba(46, 47, 47, 0.5) 0 2px 5px 0;
+    box-sizing: border-box;
+    color: rgba(46, 47, 47, 0.8);
+    cursor: pointer;
+    padding: 0 12px 0 13px;
+    position: relative;
+    text-decoration: none;
+    touch-action: manipulation;
+    width: 130px;
+    font-size: 17px;
+    line-height: 30px;
+}
+
+.colorfulButtons:hover {
+    background-color: #669EBA;
+}

@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import MainPage from "./MainPage/MainPage";
-import GameRoom from "./GameRoom";
+import GameRoom from "./GameRoom/GameRoom";
 
 function App() {
   return (

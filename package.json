@@ -3,20 +3,35 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^6.3.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "components": "^0.1.0",
     "firebase": "^11.0.2",
+    "konva": "^9.3.18",
+    "lucide-react": "^0.471.0",
     "qrcode.react": "^4.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-konva": "^18.2.10",
     "react-router-dom": "^7.0.1",
     "react-scripts": "5.0.1",
+    "react-sketch-canvas": "^6.2.0",
+    "react-toastify": "^11.0.2",
+    "react-transition-group": "^4.4.5",
+    "shadcn-ui": "^0.9.4",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -24,7 +39,10 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-warning-comments": "warn"
+    }
   },
   "browserslist": {
     "production": [

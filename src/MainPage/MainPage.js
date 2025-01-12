@@ -360,11 +360,11 @@ function MainPage() {
                                 />
                             </div>
                             <div className="formButtons">
-                                <button onClick={() => handleAuth(false)}>Login</button>
-                                <button onClick={() => { !isNameInputVisible ? setIsNameInputVisible(true) : handleAuth(true)}}>Sign Up</button>
+                                <button className="colorfulButtons" onClick={() => handleAuth(false)}>Login</button>
+                                <button className="colorfulButtons" onClick={() => { !isNameInputVisible ? setIsNameInputVisible(true) : handleAuth(true)}}>Sign Up</button>
                             </div>
                         </div>
-                        <button className="guest-btn" onClick={handleGuest} style={{width:160, margin: 20}}>
+                        <button  className="colorfulButtons" onClick={handleGuest} style={{width:170, margin: 20}}>
                             Continue as Guest
                         </button>
                     </div>
@@ -382,7 +382,7 @@ function MainPage() {
                             />
                         </div>
                         <div>
-                            <button onClick={handleGuestNameSubmit}>Submit</button>
+                            <button className="colorfulButtons" onClick={handleGuestNameSubmit}>Submit</button>
                         </div>
                     </div>
                 )}
@@ -409,7 +409,7 @@ function MainPage() {
                                 onChange={(e) => setRoomId(e.target.value)}
                                 style={{ border:0 }}
                             />
-                            <button onClick={joinGame} style={{ padding:0, border:0 }}><img width="35" height="35" src="https://img.icons8.com/ios-filled/50/search--v1.png" alt="search--v1"/></button>
+                            <button onClick={joinGame} style={{ padding:0, border:0 }}><img width="35" height="35"  src="https://img.icons8.com/ios-filled/50/search--v1.png"  alt="search--v1"/></button>
                         </div>
                     )}
                 </div>

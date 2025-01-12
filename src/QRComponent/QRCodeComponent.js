@@ -37,7 +37,7 @@ function QRCodeComponent({ roomId}) {
 
     return (
         <div>
-            <button onClick={() => setShowQRCode(true)} className="qr-code-btn">
+            <button onClick={() => setShowQRCode(true)} className="qr-code-btn colorfulButtons">
                 QR Code
             </button>
 

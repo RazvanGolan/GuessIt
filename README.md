@@ -1,72 +1,85 @@
-# Work in prorgesss... 🚧🛠️
+# GuessIt
 
-# Getting Started with Create React App
+GuessIt is a fun and interactive multiplayer guessing game built with React and powered by Firebase for authentication, hosting, and database management. Players can log in, join or host games, and compete to guess the correct word based on another player's drawing. 
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+### Authentication
+- Login with Email/Password.
+- Option to play as a guest.
 
-### `npm start`
+### Game Management
+- **Join/Host Game:** Easily join or host a new game session.
+- **Invite Players:** Share an invite link or QR code to get friends to join.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Communication
+- In-game chat to interact with other players and submit guesses.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Gameplay Mechanics
+- Each round ends when every player has taken a turn drawing.
+- The drawing player selects one word from three random options and illustrates it.
+- Players guess the word by sending messages in the chat.
+- Points are awarded for correct guesses:
+  - Bonus points for faster guesses.
+- A final scoreboard announces the winner after all rounds.
 
-### `npm test`
+## Installation and Setup Locally
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
+Ensure you have the following installed on your machine:
+- [Node.js](https://nodejs.org/) (version 14 or later)
+- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 
-### `npm run build`
+### Steps
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/GuessIt.git
+   ```
+2. Navigate to the project directory:
+   ```bash
+   cd GuessIt
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Configure Firebase:
+   - Create a Firebase project at [Firebase Console](https://console.firebase.google.com/).
+   - Enable Email/Password Authentication and set up a Realtime Database.
+   - Copy your Firebase configuration settings and update the `.env` file in the project.
+   ```env
+   REACT_APP_FIREBASE_API_KEY=your_api_key
+   REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+   REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+   REACT_APP_FIREBASE_APP_ID=your_app_id
+   ```
+5. Start the development server:
+   ```bash
+   npm start
+   ```
+6. Open your browser and navigate to `http://localhost:3000` to play!
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Usage
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+1. **Login:** Log in using your email and password, or choose to play as a guest.
+2. **Join or Host a Game:**
+   - To host a game, click on "Host Game" and share the invite link or QR code with friends.
+   - To join a game, click "Join Game" and enter the invite code.
+3. **Gameplay:**
+   - The host starts the game, and players take turns drawing and guessing.
+   - Points are awarded for correct guesses, and bonus points are given for faster responses.
+   - Chat with other players to submit guesses or have fun discussions.
+4. **End of Game:**
+   - After all rounds, view the final scoreboard to see the winner!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Technologies Used
+- **Frontend:** React, React Router
+- **Backend:** Firebase Authentication, Firebase Realtime Database
+- **Styling:** CSS Modules
+- **Other Tools:** QR Code Generator
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## License
+This project is licensed under the [MIT License](LICENSE).

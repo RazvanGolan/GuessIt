@@ -1,0 +1,153 @@
+/* Container */
+.container {
+    padding-right: 10px;
+    border-radius: 8px;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100vh;
+}
+
+.title {
+    font-family: 'Lobster Two', cursive;
+    font-size: 25px;
+    display: inline-block;
+    position: relative;
+    margin-bottom: 15px;
+    align-self: center; /* Center the title inside the flex container */
+    width: fit-content; /* Ensure the title's width matches its content */
+}
+
+.title::after {
+    content: '';
+    position: absolute;
+    width: 100%; /* Match the width of the title's text */
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: #0087ca;
+    transform-origin: bottom center;
+    transition: transform 0.25s ease-out;
+}
+
+.title:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom center;
+}
+
+/* Room ID */
+/* Room ID Container */
+.roomId {
+    background: linear-gradient(to right, #F5F0CD, #FFFFFF, #F5F0CD);
+    border: 2px solid #FADA7A;
+    border-radius: 12px;
+    box-shadow: rgba(46, 47, 47, 0.15) 0 4px 8px 0;
+    color: rgba(46, 47, 47, 0.8);
+    font-family: 'Nunito', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 10px auto;
+    max-width: 300px;
+    padding: 12px 20px;
+    position: relative;
+    text-align: center;
+}
+
+
+.roomId:hover::after {
+    transform: scaleX(1);
+}
+
+/* Optional: Add this if you want to style the actual room ID number differently */
+.roomId span {
+    font-family: 'Lobster Two', cursive;
+    color: #669EBA;
+    margin-left: 5px;
+}
+
+/* Main Layout */
+.main {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+}
+
+/* Left Column */
+.left-column {
+    flex: 1;
+    background-color: #F5F0CD;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-left: 20px;
+}
+
+/* Center Column */
+.center-column {
+    flex: 2;
+    background-color: #FFFFFF;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Right Column */
+.right-column {
+    flex: 1;
+    background-color: #F5F0CD;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-right: 20px;
+}
+
+/* Footer */
+.footer {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px;
+}
+
+/* Action Button */
+.colorfulButtons {
+    background-color: #81BFDA;
+    border: 2px solid #FADA7A;
+    border-radius: 12px;
+    box-shadow: rgba(46, 47, 47, 0.3) 0 4px 8px 0, inset 0 1px 2px rgba(255,255,255,0.3);
+    box-sizing: border-box;
+    color: rgba(46, 47, 47, 0.8);
+    cursor: pointer;
+    padding: 2px 5px;
+    position: relative;
+    text-decoration: none;
+    touch-action: manipulation;
+    width: 120px;
+    font-size: 17px;
+    line-height: 32px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    transform: translateY(0);
+}
+
+.colorfulButtons:hover {
+    background-color: #669EBA;
+    transform: translateY(-2px);
+    box-shadow: rgba(46, 47, 47, 0.4) 0 6px 12px 0, inset 0 1px 2px rgba(255,255,255,0.4);
+}
+
+.colorfulButtons:active {
+    transform: translateY(1px);
+    box-shadow: rgba(46, 47, 47, 0.2) 0 2px 4px 0, inset 0 1px 1px rgba(255,255,255,0.2);
+}
+
+/* QR Code Container */
+.qr-code-container {
+    margin-left: 10px;
+}
+
+.footer{
+    padding-bottom: 15px;
+}
