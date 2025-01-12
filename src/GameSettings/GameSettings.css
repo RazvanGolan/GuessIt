@@ -43,6 +43,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     width: 100px;
+    text-align: center;
 }
 
 .game-settings select:hover {

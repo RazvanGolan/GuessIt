@@ -6,9 +6,9 @@
     margin: 20px auto;
     display: flex;
     flex-direction: column;
-    height: 400px;
     box-shadow: rgba(46, 47, 47, 0.2) 0 4px 8px 0;
     background-color: #f9f9f9;
+    height: 800px !important;
 }
 
 .messages-list {
