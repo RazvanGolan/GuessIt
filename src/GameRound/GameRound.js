@@ -483,49 +483,7 @@ const GameRound = ({
                                     
                                     {isRoomOwner && !p.isOwner && (
                                         <button
-                                            onClick={() => removeParticipant(p.id)}
-                                            style={{
-                                                backgroundColor: '#3498db',  // Theme blue color
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                padding: '6px 12px',
-                                                cursor: 'pointer',
-                                                fontSize: '0.85rem',
-                                                fontWeight: '500',
-                                                transition: 'all 0.3s ease',
-                                                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                                position: 'relative',
-                                                overflow: 'hidden',
-                                                transform: 'translateY(0)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px',
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#2980b9';
-                                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-                                                e.currentTarget.style.transform = 'translateY(-1px)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.currentTarget.style.backgroundColor = '#3498db';
-                                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                                                e.currentTarget.style.transform = 'translateY(0)';
-                                            }}
-                                        >
-                                            <svg  // Add an icon
-                                                width="14"
-                                                height="14"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                strokeWidth="2"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                            >
-                                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                                            </svg>
+                                            onClick={() => removeParticipant(p.id)} className="colorfulButtons" >
                                             Remove
                                         </button>
                                     )}

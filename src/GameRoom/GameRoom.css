@@ -38,9 +38,33 @@
 }
 
 /* Room ID */
+/* Room ID Container */
 .roomId {
-    color: #333;
+    background: linear-gradient(to right, #F5F0CD, #FFFFFF, #F5F0CD);
+    border: 2px solid #FADA7A;
+    border-radius: 12px;
+    box-shadow: rgba(46, 47, 47, 0.15) 0 4px 8px 0;
+    color: rgba(46, 47, 47, 0.8);
+    font-family: 'Nunito', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 10px auto;
+    max-width: 300px;
+    padding: 12px 20px;
+    position: relative;
     text-align: center;
+}
+
+
+.roomId:hover::after {
+    transform: scaleX(1);
+}
+
+/* Optional: Add this if you want to style the actual room ID number differently */
+.roomId span {
+    font-family: 'Lobster Two', cursive;
+    color: #669EBA;
+    margin-left: 5px;
 }
 
 /* Main Layout */
