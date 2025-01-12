@@ -8,7 +8,8 @@
     flex-direction: column;
     box-shadow: rgba(46, 47, 47, 0.2) 0 4px 8px 0;
     background-color: #f9f9f9;
-    height: 800px !important;
+    height: 660px !important;
+    padding-right: 20px;
 }
 
 .messages-list {

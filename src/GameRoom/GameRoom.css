@@ -1,6 +1,6 @@
 /* Container */
 .container {
-    padding: 0;
+    padding-right: 10px;
     border-radius: 8px;
     font-family: 'Nunito', sans-serif;
     display: flex;
