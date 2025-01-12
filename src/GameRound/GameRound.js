@@ -3,12 +3,22 @@ import {doc, collection, addDoc, getDoc} from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 
-const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwner, gameStatus, updateGameStatus, removeParticipant }) => {
+const GameRound = ({
+                       roomId = '',
+                       participants = [],
+                       gameSettings = {},
+                       currentUser = null,
+                       isRoomOwner = false,
+                       gameStatus = {},
+                       updateGameStatus = () => {},
+                       removeParticipant = () => {}
+                   }) => {
     const isProcessing = useRef(false);
     const [words, setWords] = useState(null);
     const messageDebounceRef = useRef(null);
 
     const getRandomWords = (wordList, count) => {
+        if (!Array.isArray(wordList) || !count) return [];
         const shuffled = [...wordList].sort(() => 0.5 - Math.random());
         return shuffled.slice(0, count);
     };
@@ -20,7 +30,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
     };
 
     const getRandomUnrevealedPosition = (word, revealedPositions) => {
-        if (!word || !revealedPositions) return null;
+        if (!word || !Array.isArray(revealedPositions)) return null;
         const availablePositions = Array.from({ length: word.length })
             .map((_, i) => i)
             .filter(pos => !revealedPositions.includes(pos));
@@ -29,9 +39,9 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             : null;
     };
 
-    // Add message with debouncing
     const addSystemMessage = useCallback(async (message) => {
-        // Clear any pending message
+        if (!roomId || !message) return;
+
         if (messageDebounceRef.current) {
             clearTimeout(messageDebounceRef.current);
         }
@@ -47,31 +57,28 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             } catch (error) {
                 console.error("Error adding system message:", error);
             }
-        }, 500); // Debounce time of 500ms
+        }, 500);
     }, [roomId]);
 
     const advanceGame = useCallback(async (reason = 'time_expired') => {
-        if (!isRoomOwner || isProcessing.current) return;
+        if (!isRoomOwner || isProcessing.current || !gameStatus || !Array.isArray(participants)) return;
         isProcessing.current = true;
 
         try {
             const updatedCompletedDrawers = [
-                ...gameStatus.completedDrawers,
+                ...(gameStatus.completedDrawers || []),
                 gameStatus.currentDrawer,
-            ];
+            ].filter(Boolean);
 
-            // Check if all players have drawn in this round
             const roundComplete = updatedCompletedDrawers.length === participants.length;
 
             let updatedGameStatus;
             let message = '';
 
             if (roundComplete) {
-                // Start new round
-                const newRound = gameStatus.currentRound + 1;
+                const newRound = (gameStatus.currentRound || 0) + 1;
 
-                if (newRound > gameSettings.rounds) {
-                    // Game over
+                if (newRound > (gameSettings.rounds || 1)) {
                     updatedGameStatus = {
                         ...gameStatus,
                         isGameActive: false,
@@ -88,16 +95,15 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     };
                     message = "Game Over!";
                 } else {
-                    // Reset for new round
                     const firstDrawer = participants[0];
                     const selectedWords = getRandomWords(words, gameSettings.wordCount);
 
                     updatedGameStatus = {
                         ...gameStatus,
                         currentRound: newRound,
-                        currentDrawer: firstDrawer.id,
-                        timeRemaining: gameSettings.drawTime,
-                        completedDrawers: [], // Reset completed drawers for new round
+                        currentDrawer: firstDrawer?.id,
+                        timeRemaining: gameSettings.drawTime || 60,
+                        completedDrawers: [],
                         wordSelectionTime: 10,
                         selectedWord: null,
                         availableWords: selectedWords,
@@ -105,10 +111,9 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                         revealedHints: [],
                         nextHintTime: null
                     };
-                    message = `Round ${newRound} begins! ${firstDrawer.name} is now choosing a word!`;
+                    message = `Round ${newRound} begins! ${firstDrawer?.name || 'Next player'} is now choosing a word!`;
                 }
             } else {
-                // Continue current round with next drawer
                 const remainingDrawers = participants.filter(
                     (p) => !updatedCompletedDrawers.includes(p.id)
                 );
@@ -117,8 +122,8 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
                 updatedGameStatus = {
                     ...gameStatus,
-                    currentDrawer: nextDrawer.id,
-                    timeRemaining: gameSettings.drawTime,
+                    currentDrawer: nextDrawer?.id,
+                    timeRemaining: gameSettings.drawTime || 60,
                     completedDrawers: updatedCompletedDrawers,
                     wordSelectionTime: 10,
                     selectedWord: null,
@@ -127,12 +132,11 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     revealedHints: [],
                     nextHintTime: null
                 };
-                message = `${nextDrawer.name} is now choosing a word!`;
+                message = `${nextDrawer?.name || 'Next player'} is now choosing a word!`;
             }
 
             await updateGameStatus(updatedGameStatus);
 
-            // Add system message with debouncing
             const finalMessage = reason === 'all_guessed'
                 ? `Everyone has guessed correctly! ${message}`
                 : message;
@@ -146,9 +150,8 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         }
     }, [isRoomOwner, participants, gameStatus, words, gameSettings, updateGameStatus, addSystemMessage]);
 
-
     const selectWord = useCallback(async (word) => {
-        if (!word || gameStatus.currentDrawer !== currentUser.id) return;
+        if (!word || !gameStatus || !currentUser || gameStatus.currentDrawer !== currentUser.id) return;
 
         try {
             const hintTimes = calculateHintTimes(gameSettings.drawTime, gameSettings.hints);
@@ -157,34 +160,32 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 ...gameStatus,
                 selectedWord: word,
                 wordSelectionTime: 0,
-                timeRemaining: gameSettings.drawTime,
+                timeRemaining: gameSettings.drawTime || 60,
                 revealedHints: [],
                 drawingData: [],
                 nextHintTime: hintTimes[0] || null,
-                guessedPlayers: [] // Reset guessed players when new word is selected
+                guessedPlayers: []
             };
 
             await updateGameStatus(updatedGameStatus);
 
             const messagesRef = collection(db, "rooms", roomId, "messages");
             await addDoc(messagesRef, {
-                text: `${currentUser.name} has selected a word to draw!`,
+                text: `${currentUser.name || 'Player'} has selected a word to draw!`,
                 sender: { id: "system", name: "System" },
                 timestamp: new Date()
             });
         } catch (error) {
             console.error("Error selecting word:", error);
         }
-    }, [currentUser?.id, gameStatus, gameSettings.drawTime, gameSettings.hints, updateGameStatus, roomId]);
+    }, [currentUser, gameStatus, gameSettings.drawTime, gameSettings.hints, updateGameStatus, roomId]);
 
-    // Check if all players have guessed
     useEffect(() => {
-        if (gameStatus.isGameActive && gameStatus.selectedWord) {
-            const nonDrawerCount = participants.length - 1; // Exclude the drawer
-            const allPlayersGuessed = gameStatus.guessedPlayers.length === nonDrawerCount;
+        if (gameStatus?.isGameActive && gameStatus.selectedWord && Array.isArray(participants)) {
+            const nonDrawerCount = participants.length - 1;
+            const allPlayersGuessed = (gameStatus.guessedPlayers?.length || 0) === nonDrawerCount;
 
             if (allPlayersGuessed && !isProcessing.current) {
-                // Set timer to 0 to trigger game advancement
                 updateGameStatus(prev => ({
                     ...prev,
                     timeRemaining: 0
@@ -192,31 +193,30 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 advanceGame('all_guessed');
             }
         }
-    }, [gameStatus.guessedPlayers, participants.length, gameStatus.isGameActive, gameStatus.selectedWord, advanceGame, updateGameStatus]);
+    }, [gameStatus?.guessedPlayers, participants?.length, gameStatus?.isGameActive, gameStatus?.selectedWord, advanceGame, updateGameStatus]);
 
-    // Timer effect
     useEffect(() => {
         let timer;
 
         const updateTimer = async () => {
-            if (!gameStatus.isGameActive || isProcessing.current) return;
+            if (!gameStatus?.isGameActive || isProcessing.current) return;
 
             let needsWordSelection = false;
 
             await updateGameStatus(prev => {
-                if (!prev.isGameActive) return prev;
+                if (!prev?.isGameActive) return prev;
 
-                // Handle word selection countdown
                 if (prev.wordSelectionTime > 0) {
                     needsWordSelection = (
                         prev.wordSelectionTime === 1 &&
                         !prev.selectedWord &&
-                        prev.currentDrawer === currentUser.id &&
-                        prev.availableWords?.length > 0
+                        prev.currentDrawer === currentUser?.id &&
+                        Array.isArray(prev.availableWords) &&
+                        prev.availableWords.length > 0
                     );
 
                     if (needsWordSelection) {
-                        selectWord(gameStatus.availableWords.length > 0 ? gameStatus.availableWords[0] : "error");
+                        selectWord(gameStatus.availableWords[0]);
                     }
 
                     return {
@@ -225,9 +225,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     };
                 }
 
-                // Handle drawing countdown
                 if (prev.timeRemaining > 0) {
-                    // Handle hints
                     if (prev.nextHintTime === prev.timeRemaining) {
                         const newPosition = getRandomUnrevealedPosition(
                             prev.selectedWord,
@@ -242,7 +240,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
                             return {
                                 ...prev,
-                                revealedHints: [...prev.revealedHints, newPosition],
+                                revealedHints: [...(prev.revealedHints || []), newPosition],
                                 nextHintTime: nextTime || null,
                                 timeRemaining: prev.timeRemaining - 1
                             };
@@ -254,7 +252,6 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                     };
                 }
 
-                // Handle time expiration
                 if (prev.timeRemaining === 0 && !isProcessing.current) {
                     setTimeout(() => advanceGame('time_expired'), 0);
                 }
@@ -263,17 +260,17 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             });
         };
 
-        if (gameStatus.isGameActive) {
+        if (gameStatus?.isGameActive) {
             timer = setInterval(updateTimer, 1000);
         }
 
         return () => {
             if (timer) clearInterval(timer);
         };
-    }, [gameStatus.isGameActive, currentUser.id, advanceGame, updateGameStatus, gameSettings.drawTime, gameSettings.hints, gameStatus.availableWords, selectWord]);
+    }, [gameStatus?.isGameActive, currentUser?.id, advanceGame, updateGameStatus, gameSettings.drawTime, gameSettings.hints, gameStatus?.availableWords, selectWord]);
 
     const startGame = async () => {
-        if (!isRoomOwner) return;
+        if (!isRoomOwner || !Array.isArray(participants) || participants.length === 0) return;
 
         try {
             const wordsDocRef = doc(db, "words", "words");
@@ -298,8 +295,8 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
             const initialGameStatus = {
                 isGameActive: true,
                 currentRound: 1,
-                currentDrawer: firstDrawer.id,
-                timeRemaining: gameSettings.drawTime,
+                currentDrawer: firstDrawer?.id,
+                timeRemaining: gameSettings.drawTime || 60,
                 completedDrawers: [],
                 wordSelectionTime: 10,
                 selectedWord: null,
@@ -315,7 +312,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
 
             const messagesRef = collection(db, "rooms", roomId, "messages");
             await addDoc(messagesRef, {
-                text: `Game is starting! First round begins. ${firstDrawer.name} is now choosing a word to draw!`,
+                text: `Game is starting! First round begins. ${firstDrawer?.name || 'First player'} is now choosing a word to draw!`,
                 sender: { id: "system", name: "System" },
                 timestamp: new Date()
             });
@@ -325,18 +322,15 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         }
     };
 
-    // Generate masked word with revealed hints
     const getMaskedWord = (word, revealedPositions) => {
         if (!word) return '';
-        if (!revealedPositions) return '_ '.repeat(word.length).trim();
+        if (!Array.isArray(revealedPositions)) return '_ '.repeat(word.length).trim();
 
         return word
             .split('')
             .map((letter, index) => revealedPositions.includes(index) ? letter : '_')
             .join(' ');
     };
-
-    // Rest of the JSX remains the same as in your original component
     const styles = {
         container: {
             backgroundColor: "#F5F0CD",
@@ -356,7 +350,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         },
         section: {
             backgroundColor: "rgba(255, 255, 255, 0.7)",
-            padding: "20px",
+            padding: "20px 0",
             borderRadius: "10px",
             marginBottom: "20px",
             boxShadow: "0 4px 8px rgba(0, 0, 0, 0.05)",
@@ -436,7 +430,36 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
         scoreAnimated: {
             transform: "scale(1.2)",
             backgroundColor: "#FADA7A",
+        },
+        colorfulButtons: {
+            "backgroundColor": "#81BFDA",
+            "border": "2px solid #FADA7A",  // Made border thicker
+            "borderRadius": "12px",         // Increased border radius
+            "boxShadow": "rgba(46, 47, 47, 0.3) 0 4px 8px 0, inset 0 1px 2px rgba(255,255,255,0.3)", // Enhanced shadow with inner glow
+            "boxSizing": "border-box",
+            "color": "rgba(46, 47, 47, 0.8)",
+            "cursor": "pointer",
+            "padding": "2px 16px",         // Increased padding
+            "position": "relative",
+            "textDecoration": "none",
+            "touchAction": "manipulation",
+            "width": "130px",
+            "fontSize": "17px",
+            "lineHeight": "32px",          // Slightly taller
+            "fontWeight": "600",           // Made text bolder
+            "transition": "all 0.2s ease", // Smooth transition for hover effects
+            "transform": "translateY(0)",   // For hover animation
+            ":hover": {
+                "backgroundColor": "#669EBA",
+                "transform": "translateY(-2px)", // Slight lift effect on hover
+                "boxShadow": "rgba(46, 47, 47, 0.4) 0 6px 12px 0, inset 0 1px 2px rgba(255,255,255,0.4)" // Enhanced hover shadow
+            },
+            ":active": {
+                "transform": "translateY(1px)", // Press effect
+                "boxShadow": "rgba(46, 47, 47, 0.2) 0 2px 4px 0, inset 0 1px 1px rgba(255,255,255,0.2)"
+            }
         }
+
 
     };
 
@@ -642,7 +665,7 @@ const GameRound = ({ roomId, participants, gameSettings, currentUser, isRoomOwne
                 )}
 
                 {isRoomOwner && !gameStatus.isGameActive && (
-                    <button style={styles.button} onClick={startGame}>
+                    <button onClick={startGame} className="colorfulButtons">
                         Start Game
                     </button>
                 )}

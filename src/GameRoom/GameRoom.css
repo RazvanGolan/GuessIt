@@ -2,7 +2,6 @@
 .container {
     padding: 0;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     font-family: 'Nunito', sans-serif;
     display: flex;
     flex-direction: column;
@@ -89,17 +88,42 @@
 }
 
 /* Action Button */
-.action-button {
-    background-color: #FADA7A;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 15px;
+.colorfulButtons {
+    background-color: #81BFDA;
+    border: 2px solid #FADA7A;
+    border-radius: 12px;
+    box-shadow: rgba(46, 47, 47, 0.3) 0 4px 8px 0, inset 0 1px 2px rgba(255,255,255,0.3);
+    box-sizing: border-box;
+    color: rgba(46, 47, 47, 0.8);
     cursor: pointer;
-    font-weight: bold;
-    color: #333;
+    padding: 2px 5px;
+    position: relative;
+    text-decoration: none;
+    touch-action: manipulation;
+    width: 120px;
+    font-size: 17px;
+    line-height: 32px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    transform: translateY(0);
+}
+
+.colorfulButtons:hover {
+    background-color: #669EBA;
+    transform: translateY(-2px);
+    box-shadow: rgba(46, 47, 47, 0.4) 0 6px 12px 0, inset 0 1px 2px rgba(255,255,255,0.4);
+}
+
+.colorfulButtons:active {
+    transform: translateY(1px);
+    box-shadow: rgba(46, 47, 47, 0.2) 0 2px 4px 0, inset 0 1px 1px rgba(255,255,255,0.2);
 }
 
 /* QR Code Container */
 .qr-code-container {
     margin-left: 10px;
+}
+
+.footer{
+    padding-bottom: 15px;
 }

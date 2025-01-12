@@ -400,10 +400,10 @@ function GameRoom() {
             </div>
 
             <footer className="footer">
-                <button className="action-button" onClick={handleManualLeave}>
+                <button className="colorfulButtons" onClick={handleManualLeave}>
                     Leave Room
                 </button>
-                <button className="action-button" onClick={handleInviteLink}>
+                <button className="colorfulButtons" onClick={handleInviteLink}>
                     {copyStatus}
                 </button>
                 <div className="qr-code-container">

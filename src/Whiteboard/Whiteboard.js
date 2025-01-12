@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import './Whiteboard.css'
 
 const Whiteboard = ({
                         roomId = '',
@@ -220,45 +221,12 @@ useEffect(() => {
                     </div>
                     <button
                         onClick={clearCanvas}
-                        className="clear-button"
+                        className="colorfullButton"
                     >
                         Clear Canvas
                     </button>
                 </div>
             )}
-            <style jsx>{`
-                .whiteboard-container {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 1rem;
-                    padding: 1rem;
-                }
-                .drawing-controls {
-                    display: flex;
-                    gap: 2rem;
-                    align-items: center;
-                    padding: 1rem;
-                    background-color: #f5f5f5;
-                    border-radius: 8px;
-                }
-                .color-picker, .brush-size {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
-                }
-                .clear-button {
-                    padding: 0.5rem 1rem;
-                    background-color: #ff4444;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                }
-                .clear-button:hover {
-                    background-color: #cc0000;
-                }
-            `}</style>
         </div>
     );
 };
